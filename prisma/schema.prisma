@@ -1,0 +1,230 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String         @id @default(cuid())
+  avatar           String?
+  name             String
+  email            String
+  password         String
+  emailVerified    Boolean        @default(false)
+  role             UserRole       @default(user)
+  stripeCustomerId String?        @unique
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  Session          Session[]
+  Verification     Verification[]
+  Media            Media[]
+  Subscription     Subscription[]
+  Credits          Credits[]
+  History          History[]
+
+  @@unique([email])
+  @@index([createdAt])
+  @@map("user")
+}
+
+enum UserRole {
+  admin
+  user
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([token])
+  @@index([createdAt])
+  @@map("session")
+}
+
+model Verification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      VerificationType
+  token     String
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([token])
+  @@index([createdAt])
+  @@map("verification")
+}
+
+enum VerificationType {
+  email_verification
+  password_reset
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key])
+  @@index([createdAt])
+  @@map("setting")
+}
+
+model Media {
+  id               String    @id @default(cuid())
+  userId           String?
+  user             User?     @relation(fields: [userId], references: [id])
+  name             String
+  mimeType         String
+  size             Int
+  storageType      String
+  url              String
+  key              String
+  fileName         String
+  libraryMedia     Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  inputHistories   History[] @relation("HistoryInputMedia")
+  previewHistories History[] @relation("HistoryPreviewMedia")
+  outputHistories  History[] @relation("HistoryOutputMedia")
+
+  @@index([createdAt])
+  @@map("media")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Posts     Post[]   @relation("PostTags")
+
+  @@index([createdAt])
+  @@map("tag")
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  thumbnail   String?
+  publishedAt DateTime
+  tags        Tag[]    @relation("PostTags")
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("post")
+}
+
+enum PlanStatus {
+  active
+  unlisted
+}
+
+model BillingPlan {
+  id             String         @id @default(cuid())
+  name           String
+  description    String?
+  monthlyPrice   Float
+  yearlyPrice    Float
+  productId      String?
+  monthlyPriceId String?
+  yearlyPriceId  String?
+  features       String
+  status         PlanStatus     @default(active)
+  position       Int
+  credits        Int
+  isPopular      Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  Subscription   Subscription[]
+
+  @@index([createdAt])
+  @@map("billing_plan")
+}
+
+enum SubscriptionStatus {
+  active
+  inactive
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               BillingPlan        @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([currentPeriodStart, currentPeriodEnd])
+  @@index([status])
+  @@map("subscription")
+}
+
+enum CreditsType {
+  free
+  paid
+}
+
+model Credits {
+  id      String      @id @default(cuid())
+  userId  String
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits Int
+  used    Int         @default(0)
+  type    CreditsType
+  month   String
+
+  @@index([userId])
+  @@index([month])
+  @@index([type])
+  @@map("credits")
+}
+
+model History {
+  id             String   @id @default(cuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id])
+  inputMediaId   String
+  inputMedia     Media    @relation("HistoryInputMedia", fields: [inputMediaId], references: [id], onDelete: Cascade)
+  previewMediaId String
+  previewMedia   Media    @relation("HistoryPreviewMedia", fields: [previewMediaId], references: [id], onDelete: Cascade)
+  outputMediaId  String
+  outputMedia    Media    @relation("HistoryOutputMedia", fields: [outputMediaId], references: [id], onDelete: Cascade)
+  peviewHeight   Int
+  previewWidth   Int
+  outputHeight   Int
+  outputWidth    Int
+  expiredAt      DateTime
+  unlocked       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("history")
+}
