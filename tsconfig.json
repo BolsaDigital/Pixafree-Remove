@@ -1,40 +1,41 @@
 {
   "compilerOptions": {
+    "baseUrl": ".", // Define la base para la resolución de módulos no relativos
     "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
+      "dom", // Incluye las definiciones de tipos para el DOM del navegador
+      "dom.iterable", // Incluye las definiciones de tipos para iterables del DOM
+      "esnext" // Incluye las definiciones de tipos para las últimas características de ECMAScript
     ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
+    "allowJs": true, // Permite archivos JavaScript en el proyecto
+    "skipLibCheck": true, // Omite la verificación de tipos de todos los archivos de declaración (.d.ts)
+    "strict": true, // Habilita todas las opciones estrictas de verificación de tipos
+    "noEmit": true, // No emite archivos JavaScript (Next.js se encarga de la transpilación)
+    "esModuleInterop": true, // Permite la interoperabilidad de módulos CommonJS con módulos ES
+    "module": "esnext", // Especifica el sistema de módulos para el código generado
+    "moduleResolution": "bundler", // Estrategia de resolución de módulos para bundlers (como Webpack/Rollup)
+    "resolveJsonModule": true, // Permite importar módulos con extensión .json
+    "isolatedModules": true, // Asegura que cada archivo pueda ser transpilado de forma segura de forma aislada
+    "jsx": "preserve", // Especifica cómo TypeScript maneja el JSX (para React 17+ y el nuevo transformador JSX)
+    "incremental": true, // Habilita la compilación incremental para un rendimiento más rápido
     "plugins": [
       {
-        "name": "next"
+        "name": "next" // Plugin de TypeScript para Next.js
       }
     ],
     "paths": {
       "@/*": [
-        "./src/*"
+        "./src/*" // Define un alias de ruta para importar módulos desde 'src'
       ]
     },
-    "target": "ES2023"
+    "target": "esnext" // Especifica la versión de ECMAScript para el código de salida
   },
   "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
+    "next-env.d.ts", // Archivo de definición de entorno de Next.js
+    "**/*.ts", // Incluye todos los archivos .ts
+    "**/*.tsx", // Incluye todos los archivos .tsx (con JSX)
+    ".next/types/**/*.ts" // Incluye los tipos generados por Next.js
   ],
   "exclude": [
-    "node_modules"
+    "node_modules" // Excluye la carpeta node_modules de la verificación de tipos
   ]
 }
