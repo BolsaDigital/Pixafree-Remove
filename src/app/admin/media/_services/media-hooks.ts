@@ -3,8 +3,7 @@ import { queryKeys } from '@/config/queryKeys';
 import { Media } from '@prisma/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useRef, useState, MutableRefObject } from 'react'; // Importa MutableRefObject
 
 import { generateRandomKey } from '@/lib/crypto';
 import { SortOrder } from '@/lib/schema';
@@ -26,7 +25,8 @@ export const useUploadFiles = () => {
   const [progress, setProgress] = useState(0);
   const [isUploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
-  const controller = useRef<AbortController>(null);
+  // Corrige la declaración de controller para usar MutableRefObject
+  const controller: MutableRefObject<AbortController | null> = useRef(null);
 
   const addFiles = (files: File[]) => {
     const filteredFiles = files.filter((file) => {
@@ -51,6 +51,7 @@ export const useUploadFiles = () => {
     formData.append('file', item.file);
     setUploading(true);
     setProgress(0);
+    // Asigna la nueva instancia de AbortController a controller.current
     controller.current = new AbortController();
 
     try {
@@ -95,7 +96,7 @@ export const useUploadFiles = () => {
         uploadFile(file);
       }
     }
-  }, [files.length, isUploading]);
+  }, [files.length, isUploading, files]); // Añade 'files' como dependencia para asegurar el re-renderizado cuando 'files' cambia
 
   return {
     files,
