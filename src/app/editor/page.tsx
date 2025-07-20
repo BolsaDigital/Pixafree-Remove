@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import {
   Download, Type, Image as ImageIcon, Layout, Circle, Square, Calendar, Trash2, Undo2, Redo2, Sparkles, Plus, Palette, TextCursorInput, PenTool, CreditCard, DollarSign,
   Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown, PlusSquare, RotateCcw, RotateCw, ImageMinus,
-  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal
+  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler // Added Ruler icon
 } from 'lucide-react';
 
 // Firebase imports (kept for general app functionality like history, authentication)
@@ -119,8 +119,8 @@ interface ImageElement {
   flipX: number;
   flipY: number;
   filter: 'none' | 'grayscale' | 'sepia';
-  width?: number; // <--- ADDED THIS
-  height?: number; // <--- ADDED THIS
+  width?: number;
+  height?: number;
 }
 
 interface CanvasState {
@@ -141,7 +141,6 @@ interface CanvasState {
   productFlipY: number;
   productFilter: 'none' | 'grayscale' | 'sepia';
 
-  // Background properties now only apply to the fixed preset background
   backgroundOpacity: number;
   backgroundBlurRadius: number;
   backgroundShadowEnabled: boolean;
@@ -154,12 +153,12 @@ interface CanvasState {
   backgroundFlipX: number;
   backgroundFlipY: number;
   backgroundFilter: 'none' | 'grayscale' | 'sepia';
-  selectedPresetBackgroundUrl?: string; // Only for the fixed preset background
+  selectedPresetBackgroundUrl?: string;
 
   textElements: TextElement[];
   shapeElements: ShapeElement[];
   dateElement: DateElement | null;
-  imageElements: ImageElement[]; // Now includes user-uploaded and AI-generated "backgrounds"
+  imageElements: ImageElement[];
 }
 
 interface CopiedStyle {
@@ -167,16 +166,14 @@ interface CopiedStyle {
   style: any;
 }
 
-// New interface for admin-uploaded backgrounds to include premium status
 interface AdminBackground {
   id: string;
   url: string;
   isPremium: boolean;
 }
 
-// New interface for combined preset backgrounds (hardcoded + admin)
 interface DisplayBackground {
-  id: string; // Unique ID for selection/tracking
+  id: string;
   url: string;
   isPremium: boolean;
 }
@@ -214,13 +211,12 @@ export default function EditorPage() {
   const searchParams = useSearchParams();
 
   const [productImageUrl, setProductImageUrl] = useState<string>('https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload');
-  // Removed selectedFile state as it's now handled by tempUploadedFile
 
-  const [selectedPresetBackgroundUrl, setSelectedPresetBackgroundUrl] = useState<string | undefined>(undefined); // New state for fixed preset backgrounds
+  const [selectedPresetBackgroundUrl, setSelectedPresetBackgroundUrl] = useState<string | undefined>(undefined);
 
   const [scenePrompt, setScenePrompt] = useState<string>('Un estudio de fotografía minimalista con luz suave');
-  const [aiReferenceImageFile, setAiReferenceImageFile] = useState<File | null>(null); // New state for AI reference image file
-  const [aiReferenceImageUrl, setAiReferenceImageUrl] = useState<string | null>(null); // New state for AI reference image URL
+  const [aiReferenceImageFile, setAiReferenceImageFile] = useState<File | null>(null);
+  const [aiReferenceImageUrl, setAiReferenceImageUrl] = useState<string | null>(null);
   const [isGeneratingScene, setIsGeneratingScene] = useState<boolean>(false);
 
   const [konvaCanvas, setKonvaCanvas] = useState<HTMLCanvasElement | null>(null);
@@ -232,7 +228,7 @@ export default function EditorPage() {
   const [selectedShapeElementId, setSelectedShapeElementId] = useState<string | null>(null);
   const [dateElement, setDateElement] = useState<DateElement | null>(null);
   const [selectedDateElementId, setSelectedDateElementId] = useState<string | null>(null);
-  const [imageElements, setImageElements] = useState<ImageElement[]>([]); // Now includes user-uploaded and AI-generated "backgrounds"
+  const [imageElements, setImageElements] = useState<ImageElement[]>([]);
   const [selectedImageElementId, setSelectedImageElementId] = useState<string | null>(null);
 
   const [productX, setProductX] = useState(CANVAS_SIZE / 2);
@@ -249,13 +245,11 @@ export default function EditorPage() {
   const [productShadowOpacity, setProductShadowOpacity] = useState(0.5);
   const [productReflectionEnabled, setProductReflectionEnabled] = useState(false);
   const [productFlipX, setProductFlipX] = useState(1);
-  const [productFlipY, setProductFlipY] = useState(1); // Corrected: Removed type annotation inside destructuring
+  const [productFlipY, setProductFlipY] = useState(1);
   const [productFilter, setProductFilter] = useState<'none' | 'grayscale' | 'sepia'>('none');
-  // NEW STATE: Para controlar si el producto ha sido escalado/movido manualmente
   const [hasProductBeenScaledManually, setHasProductBeenScaledManually] = useState(false);
 
 
-  // Background properties now only apply to the fixed preset background
   const [backgroundOpacity, setBackgroundOpacity] = useState(1);
   const [backgroundBlurRadius, setBackgroundBlurRadius] = useState(0);
   const [backgroundShadowEnabled, setBackgroundShadowEnabled] = useState(false);
@@ -273,13 +267,10 @@ export default function EditorPage() {
   const [history, setHistory] = useState<CanvasState[]>([]);
   const [historyPointer, setHistoryPointer] = useState(-1);
 
-  // New state to control right sidebar content
   const [rightSidebarView, setRightSidebarView] = useState<'properties' | 'backgrounds'>('backgrounds');
-  // State for the "More Tools" dropdown
   const [showMoreToolsDropdown, setShowMoreToolsDropdown] = useState(false);
   const moreToolsRef = useRef<HTMLButtonElement>(null);
 
-  // New states for unified image upload
   const [showImageUploadTypeModal, setShowImageUploadTypeModal] = useState(false);
   const [tempUploadedFile, setTempUploadedFile] = useState<File | null>(null);
 
@@ -288,39 +279,31 @@ export default function EditorPage() {
   const [copiedStyle, setCopiedStyle] = useState<CopiedStyle | null>(null);
   const [zOrderAction, setZOrderAction] = useState<{ type: 'up' | 'down' | 'top' | 'bottom', id: string, elementType: 'product' | 'background' | 'text' | 'shape' | 'date' | 'image' } | null>(null);
 
-  // New state to manage moving a newly added image to the bottom of the movable layer
   const [imageToMoveToBottomId, setImageToMoveToBottomId] = useState<string | null>(null);
 
-  // Initial states for collapsible sections - these will be removed for properties view
-  // but kept for background view if needed.
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [isTextureOpen, setIsTextureOpen] = useState(false);
-  // State for "Cargar Imagen de Fondo" collapsible section
   const [isCustomBackgroundUploadOpen, setIsCustomBackgroundUploadOpen] = useState(false);
 
-  // NEW STATE: For "Generar Escena con IA" collapsible section
-  const [isGenerateSceneAIOpen, setIsGenerateSceneAIOpen] = useState(true); // Initially open
+  const [isGenerateSceneAIOpen, setIsGenerateSceneAIOpen] = useState(true);
 
-
-  // Firebase states (kept for general app functionality like history, authentication)
   const [firebaseApp, setFirebaseApp] = useState<FirebaseApp | null>(null);
   const [db, setDb] = useState<Firestore | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
 
-  // Admin uploaded preset backgrounds (NO LONGER SIMULATED, user will integrate their API here)
   const [isUploadingAdminPreset, setIsUploadingAdminPreset] = useState(false);
-  // Changed to store objects with id, url, and isPremium
   const [adminUploadedBackgrounds, setAdminUploadedBackgrounds] = useState<AdminBackground[]>([]);
-  // New state for admin upload premium/free toggle
   const [newPresetIsPremium, setNewPresetIsPremium] = useState<boolean>(false);
 
-  // Refs for file inputs to programmatically click them
-  const unifiedImageUploadRef = useRef<HTMLInputElement>(null); // Unified ref for image uploads
+  const unifiedImageUploadRef = useRef<HTMLInputElement>(null);
   const uploadCustomBackgroundRef = useRef<HTMLInputElement>(null);
   const adminUploadPresetRef = useRef<HTMLInputElement>(null);
-  const aiReferenceImageRef = useRef<HTMLInputElement>(null); // New ref for AI reference image
+  const aiReferenceImageRef = useRef<HTMLInputElement>(null);
+
+  // NEW STATE: For toggling center guides
+  const [showCenterGuides, setShowCenterGuides] = useState(true);
 
 
   const predefinedTextStyles = [
@@ -336,38 +319,45 @@ export default function EditorPage() {
     { name: 'Contorno', text: 'Contorno', fontSize: 30, fontFamily: '#FFFFFF', stroke: '#000000', strokeWidth: 2, align: 'center' },
   ];
 
-  // Sample images for preset backgrounds (hardcoded) - now as DisplayBackground objects
   const hardcodedPresetBackgrounds: DisplayBackground[] = [
     { id: 'hardcoded-1', url: 'https://placehold.co/150x150/AEC6CF/000000', isPremium: false },
     { id: 'hardcoded-2', url: 'https://placehold.co/150x150/FFDAB9/000000', isPremium: false },
     { id: 'hardcoded-3', url: 'https://placehold.co/150x150/B0E0E6/000000', isPremium: false },
-    { id: 'hardcoded-4', url: 'https://placehold.co/150x150/DDA0DD/000000', isPremium: true }, // Example premium
+    { id: 'hardcoded-4', url: 'https://placehold.co/150x150/DDA0DD/000000', isPremium: true },
     { id: 'hardcoded-5', url: 'https://placehold.co/150x150/98FB98/000000', isPremium: false },
-    { id: 'hardcoded-6', url: 'https://placehold.co/150x150/F0E68C/000000', isPremium: true }, // Example premium
+    { id: 'hardcoded-6', url: 'https://placehold.co/150x150/F0E68C/000000', isPremium: true },
   ];
 
-  // Sample images for Pixabay and Pexels (mock data for now)
   const pixabaySampleImages: DisplayBackground[] = [
     { id: 'pixabay-1', url: 'https://placehold.co/150x150/ADD8E6/000000', isPremium: false },
     { id: 'pixabay-2', url: 'https://placehold.co/150x150/E0BBE4/000000', isPremium: false },
-    { id: 'pixabay-3', url: 'https://placehold.co/150x150/957DAD/000000', isPremium: true }, // Example premium
+    { id: 'pixabay-3', url: 'https://placehold.co/150x150/957DAD/000000', isPremium: true },
     { id: 'pixabay-4', url: 'https://placehold.co/150x150/C7CEEA/000000', isPremium: false },
   ];
 
   const pexelsSampleImages: DisplayBackground[] = [
     { id: 'pexels-1', url: 'https://placehold.co/150x150/FFB6C1/000000', isPremium: false },
-    { id: 'pexels-2', url: 'https://placehold.co/150x150/FFD700/000000', isPremium: true }, // Example premium
+    { id: 'pexels-2', url: 'https://placehold.co/150x150/FFD700/000000', isPremium: true },
     { id: 'pexels-3', url: 'https://placehold.co/150x150/ADFF2F/000000', isPremium: false },
     { id: 'pexels-4', url: 'https://placehold.co/150x150/87CEEB/000000', isPremium: false },
   ];
 
-  // Simulate user's premium status (for demo purposes)
-  const [isUserPremium, setIsUserPremium] = useState(false); // Set to true to test premium features
+  const [isUserPremium, setIsUserPremium] = useState(false);
 
   // Initialize Firebase (for auth and history)
   useEffect(() => {
     try {
-      const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+      // En un despliegue real en EC2, __firebase_config y __app_id no existen.
+      // Usamos variables de entorno de Next.js que deben ser configuradas en el servidor.
+      const firebaseConfigString = process.env.NEXT_PUBLIC_FIREBASE_CONFIG;
+      const currentAppId = process.env.NEXT_PUBLIC_APP_ID || 'default-app-id'; // Puedes definir un ID de app por defecto
+
+      if (!firebaseConfigString) {
+        console.error("NEXT_PUBLIC_FIREBASE_CONFIG no está definida. Firebase no se inicializará.");
+        return;
+      }
+
+      const firebaseConfig = JSON.parse(firebaseConfigString);
       const app = initializeApp(firebaseConfig);
       const firestore = getFirestore(app);
       const firebaseAuth = getAuth(app);
@@ -375,28 +365,23 @@ export default function EditorPage() {
       setFirebaseApp(app);
       setDb(firestore);
       setAuth(firebaseAuth);
-
-      const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       setAppId(currentAppId);
 
       const setupAuth = async () => {
-        if (typeof __initial_auth_token !== 'undefined') {
-          await signInWithCustomToken(firebaseAuth, __initial_auth_token);
-        } else {
-          await signInAnonymously(firebaseAuth);
-        }
+        // En un despliegue real en EC2, __initial_auth_token no está disponible.
+        // Típicamente, iniciarías sesión usando métodos estándar de Firebase (email/contraseña, Google, etc.)
+        // o generarías un token personalizado desde tu propio backend.
+        // Para mantener la funcionalidad de prueba de la app, usaremos signInAnonymously si no hay otra autenticación.
+        await signInAnonymously(firebaseAuth);
         setUserId(firebaseAuth.currentUser?.uid || crypto.randomUUID());
       };
       setupAuth();
 
     } catch (e) {
-      console.error("Error initializing Firebase:", e);
-      // alert("Error initializing Firebase. Some features may not work."); // Removed alert to avoid blocking
+      console.error("Error al inicializar Firebase:", e);
     }
   }, []);
 
-  // No longer fetching admin presets from Firestore/S3 simulation
-  // This section would be replaced by user's actual API calls in production
   useEffect(() => {
     // This useEffect would be where you fetch your admin-uploaded backgrounds
     // from your `https://pixafree.online/admin/media` API.
@@ -406,7 +391,6 @@ export default function EditorPage() {
       try {
         const response = await fetch('https://pixafree.online/api/admin/media-backgrounds', {
           headers: {
-            // Include your authentication token here if needed
             'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
           }
         });
@@ -414,21 +398,15 @@ export default function EditorPage() {
           throw new Error('Failed to fetch admin backgrounds');
         }
         const data = await response.json();
-        // Assuming your API returns an array of { id, url, isPremium } objects
         setAdminUploadedBackgrounds(data.backgrounds);
       } catch (error) {
         console.error('Error fetching admin backgrounds from your API:', error);
-        // Handle error, e.g., show a message to the user
       }
     };
-    // Call this function when component mounts or when a refresh is needed
-    // fetchMyAdminBackgrounds();
     */
-    // For this demo, we'll just add it to local state (not persistent)
   }, []);
 
 
-  // Define getCurrentCanvasState first as it's a dependency for saveCurrentState
   const getCurrentCanvasState = useCallback((): CanvasState => {
     return {
       productX, productY, productScale, productRotation, productOpacity, productBlurRadius,
@@ -438,7 +416,7 @@ export default function EditorPage() {
       backgroundOpacity, backgroundBlurRadius,
       backgroundShadowEnabled, backgroundShadowColor, backgroundShadowBlur, backgroundShadowOffsetX, backgroundShadowOffsetY, backgroundShadowOpacity,
       backgroundReflectionEnabled, backgroundFlipX, backgroundFlipY, backgroundFilter,
-      selectedPresetBackgroundUrl, // Save this state
+      selectedPresetBackgroundUrl,
 
       textElements: JSON.parse(JSON.stringify(textElements)),
       shapeElements: JSON.parse(JSON.stringify(shapeElements)),
@@ -452,40 +430,31 @@ export default function EditorPage() {
     backgroundOpacity, backgroundBlurRadius,
     backgroundShadowEnabled, backgroundShadowColor, backgroundShadowBlur, backgroundShadowOffsetX, backgroundShadowOffsetY, backgroundShadowOpacity,
     backgroundReflectionEnabled, backgroundFlipX, backgroundFlipY, backgroundFilter,
-    selectedPresetBackgroundUrl, // Add this dependency
+    selectedPresetBackgroundUrl,
     textElements, shapeElements, dateElement, imageElements
   ]);
 
-  // Define saveCurrentState next as it's a dependency for onTransformEndCommit
   const saveCurrentState = useCallback(() => {
     const newState = getCurrentCanvasState();
     setHistory((prevHistory) => {
-      // Check if the current state is identical to the last saved state
-      // This prevents saving duplicate states if no actual change occurred
       if (prevHistory.length > 0 && historyPointer >= 0 && JSON.stringify(prevHistory[historyPointer]) === JSON.stringify(newState)) {
-        return prevHistory; // No change, return previous history
+        return prevHistory;
       }
 
-      // Slice history to remove any "future" states after an undo
       const newHistory = prevHistory.slice(0, historyPointer + 1);
       const updatedHistory = [...newHistory, newState];
 
-      // Update the history pointer to the new end of history
-      // This is crucial: set the pointer based on the *new* history length
       setHistoryPointer(updatedHistory.length - 1);
 
       return updatedHistory;
     });
-    // Removed the separate setHistoryPointer call here, as it's now inside setHistory callback
-  }, [getCurrentCanvasState, historyPointer]); // historyPointer is still a dependency because of the comparison
+  }, [getCurrentCanvasState, historyPointer]);
 
-  // Define onTransformEndCommit here as it's a dependency for other handlers
   const onTransformEndCommit = useCallback(() => {
     saveCurrentState();
   }, [saveCurrentState]);
 
   const applyState = useCallback((state: CanvasState) => {
-    // Ensure state is not null or undefined before accessing its properties
     if (!state) {
       console.error("Attempted to apply an undefined or null state.");
       return;
@@ -520,7 +489,7 @@ export default function EditorPage() {
     setBackgroundFlipX(state.backgroundFlipX);
     setBackgroundFlipY(state.backgroundFlipY);
     setBackgroundFilter(state.backgroundFilter);
-    setSelectedPresetBackgroundUrl(state.selectedPresetBackgroundUrl); // Apply this state
+    setSelectedPresetBackgroundUrl(state.selectedPresetBackgroundUrl);
 
     setTextElements(state.textElements);
     setShapeElements(state.shapeElements);
@@ -531,9 +500,6 @@ export default function EditorPage() {
     let newSelectedElement: typeof selectedCanvasElement = 'product';
     let newSelectedId: string | null = null;
 
-    // Adjust selected element logic for background
-    // If the selected element was 'background' and a preset background URL exists, keep it selected.
-    // Otherwise, default to 'product'.
     if (selectedCanvasElement === 'background' && state.selectedPresetBackgroundUrl) {
         newSelectedElement = 'background';
     } else if (currentSelectedId) {
@@ -551,7 +517,7 @@ export default function EditorPage() {
             newSelectedId = currentSelectedId;
         }
     } else {
-        newSelectedElement = 'product'; // Default to product if nothing else is selected or background was cleared
+        newSelectedElement = 'product';
     }
     setSelectedCanvasElement(newSelectedElement);
     setSelectedTextElementId(newSelectedElement === 'text' ? newSelectedId : null);
@@ -566,7 +532,7 @@ export default function EditorPage() {
       setBackgroundOpacity, setBackgroundBlurRadius,
       setBackgroundShadowEnabled, setBackgroundShadowColor, setBackgroundShadowBlur, setBackgroundShadowOffsetX, setBackgroundShadowOffsetY, setBackgroundShadowOpacity,
       setBackgroundReflectionEnabled, setBackgroundFlipX, setBackgroundFlipY, setBackgroundFilter,
-      setSelectedPresetBackgroundUrl, // Add this dependency
+      setSelectedPresetBackgroundUrl,
       setTextElements, setShapeElements, setDateElement, setImageElements
   ]);
 
@@ -577,17 +543,11 @@ export default function EditorPage() {
     }
   }, [searchParams]);
 
-  // **NUEVA LÓGICA PARA ESCALADO INICIAL DEL PRODUCTO**
-  // Este useEffect se encargará de escalar la imagen del producto
-  // solo cuando se carga inicialmente o se cambia el `productImageUrl`
-  // y el `productScale` aún está en su valor predeterminado (1), Y NO HA SIDO ESCALADO MANUALMENTE.
   useEffect(() => {
     console.log('Product Image URL Effect Firing:', { productImageUrl, productScale, hasProductBeenScaledManually });
     const img = new window.Image();
     img.src = productImageUrl;
     img.onload = () => {
-      // Solo aplica el escalado inicial si productScale es 1 (no ha sido modificado por el usuario)
-      // y si la imagen no es un placeholder genérico, Y NO HA SIDO ESCALADO MANUALMENTE.
       if (!hasProductBeenScaledManually && productScale === 1 && !productImageUrl.includes('placehold.co')) {
         const maxDimension = Math.max(img.width, img.height);
         const targetMaxDimension = CANVAS_SIZE * 0.8;
@@ -597,10 +557,8 @@ export default function EditorPage() {
         }
         console.log('Applying initial product scale:', newScale);
         setProductScale(newScale);
-        setProductX(CANVAS_SIZE / 2); // Centrar horizontalmente
-        setProductY(CANVAS_SIZE / 2); // Centrar verticalmente
-        // No llamamos a onTransformEndCommit aquí. El estado inicial se guardará
-        // por el useEffect que llama a saveCurrentState cuando historyPointer es -1.
+        setProductX(CANVAS_SIZE / 2);
+        setProductY(CANVAS_SIZE / 2);
       } else {
         console.log('Skipping initial product scale due to conditions:', { hasProductBeenScaledManually, productScale, isPlaceholder: productImageUrl.includes('placehold.co') });
       }
@@ -618,7 +576,6 @@ export default function EditorPage() {
     }
   }, [konvaCanvas, historyPointer, saveCurrentState]);
 
-  // Updated handleElementSelect to manage sidebar view and properties
   const handleElementSelect = useCallback((element: 'product' | 'background' | 'text' | 'shape' | 'date' | 'image' | null, id?: string) => {
     setSelectedCanvasElement(element);
     setSelectedTextElementId(null);
@@ -626,7 +583,6 @@ export default function EditorPage() {
     setSelectedDateElementId(null);
     setSelectedImageElementId(null);
 
-    // Set the specific ID if applicable
     if (element === 'text' && id) {
       setSelectedTextElementId(id);
     } else if (element === 'shape' && id) {
@@ -636,15 +592,11 @@ export default function EditorPage() {
     } else if (element === 'image' && id) {
       setSelectedImageElementId(id);
     }
-    // Note: 'background' selection will not attach transformer as it's a fixed stage background.
-    // Its properties are edited via the 'Fondos' sidebar.
   }, []);
 
   const handleProductRotate = useCallback((rotation: number) => {
     setProductRotation(rotation);
   }, []);
-
-  // Removed handleBackgroundRotate as fixed background does not rotate independently
 
   const handleUpdateTextElement = useCallback((id: string, updates: Partial<TextElement>) => {
     setTextElements((prev) =>
@@ -662,28 +614,23 @@ export default function EditorPage() {
     setDateElement((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
 
-  // Moved handleUpdateImageElement declaration here to ensure it's defined before use
   const handleUpdateImageElement = useCallback((id: string, updates: Partial<ImageElement>) => {
     setImageElements((prev) =>
       prev.map((imgEl) => (imgEl.id === id ? { ...imgEl, ...updates } : imgEl))
     );
   }, []);
 
-  // Callback from CanvasEditor when an image has finished loading and is ready
-  // **MODIFICADO**: Ahora recibe x, y, width, height de CanvasImageElement
   const handleImageAddedAndLoaded = useCallback((
     id: string,
     initialScaleX: number,
     initialScaleY: number,
-    x: number, // Nuevo
-    y: number, // Nuevo
-    width: number, // Nuevo
-    height: number, // Nuevo
+    x: number,
+    y: number,
+    width: number,
+    height: number
   ) => {
     setImageElements((prev) => {
       const existingImage = prev.find(img => img.id === id);
-      // Solo actualiza si las propiedades de posición/escala/dimensiones son diferentes,
-      // o si las dimensiones no están definidas (lo que indica una imagen recién cargada).
       if (!existingImage ||
           existingImage.scaleX !== initialScaleX ||
           existingImage.scaleY !== initialScaleY ||
@@ -699,22 +646,21 @@ export default function EditorPage() {
                 y: y,
                 scaleX: initialScaleX,
                 scaleY: initialScaleY,
-                width: width, // Guardar las dimensiones originales
-                height: height, // Guardar las dimensiones originales
+                width: width,
+                height: height,
               }
             : imgEl
         );
       }
-      return prev; // No se necesita actualización, evita el bucle infinito
+      return prev;
     });
-    onTransformEndCommit(); // Commit after the image is loaded and positioned
+    onTransformEndCommit();
   }, [onTransformEndCommit]);
 
 
-  // Callback from CanvasEditor when an image has been moved to the bottom
   const onImageMovedToBottom = useCallback((id: string) => {
     if (id === imageToMoveToBottomId) {
-      setImageToMoveToBottomId(null); // Reset the state after the action is complete
+      setImageToMoveToBottomId(null);
     }
   }, [imageToMoveToBottomId]);
 
@@ -756,9 +702,9 @@ export default function EditorPage() {
     };
     setTextElements((prev) => [...prev, newText]);
     handleElementSelect('text', newText.id);
-    onTransformEndCommit(); // Commit immediately for text as it doesn't have external loading
-    setTextCreationMode(false); // Exit text creation mode
-    setRightSidebarView('properties'); // Switch to properties when adding text
+    onTransformEndCommit();
+    setTextCreationMode(false);
+    setRightSidebarView('properties');
   };
 
 
@@ -766,7 +712,7 @@ export default function EditorPage() {
     if (selectedCanvasElement === 'text' && selectedTextElementId) {
       setTextElements((prev) => prev.filter((textEl) => textEl.id !== selectedTextElementId));
       setSelectedTextElementId(null);
-      setSelectedCanvasElement('product'); // Default to product selection
+      setSelectedCanvasElement('product');
       onTransformEndCommit();
     }
   }, [selectedCanvasElement, selectedTextElementId, onTransformEndCommit]);
@@ -799,7 +745,7 @@ export default function EditorPage() {
     setShapeElements((prev) => [...prev, newShape]);
     handleElementSelect('shape', newShape.id);
     onTransformEndCommit();
-    setRightSidebarView('properties'); // Switch to properties when adding shape
+    setRightSidebarView('properties');
   };
 
 
@@ -807,7 +753,7 @@ export default function EditorPage() {
     if (selectedCanvasElement === 'shape' && selectedShapeElementId) {
       setShapeElements((prev) => prev.filter((shapeEl) => shapeEl.id !== selectedShapeElementId));
       setSelectedShapeElementId(null);
-      setSelectedCanvasElement('product'); // Default to product selection
+      setSelectedCanvasElement('product');
       onTransformEndCommit();
     }
   }, [selectedCanvasElement, selectedShapeElementId, onTransformEndCommit]);
@@ -864,12 +810,12 @@ export default function EditorPage() {
       reflectionEnabled: false,
       flipX: 1, flipY: 1,
       filter: 'none',
-      format: defaultFormat, // Ensure format is set
+      format: defaultFormat,
     };
     setDateElement(newDate);
     handleElementSelect('date', newDate.id);
     onTransformEndCommit();
-    setRightSidebarView('properties'); // Switch to properties when adding date
+    setRightSidebarView('properties');
   };
 
 
@@ -877,7 +823,7 @@ export default function EditorPage() {
     if (selectedCanvasElement === 'date' && dateElement) {
       setDateElement(null);
       setSelectedDateElementId(null);
-      setSelectedCanvasElement('product'); // Default to product selection
+      setSelectedCanvasElement('product');
       onTransformEndCommit();
     }
   }, [selectedCanvasElement, dateElement, onTransformEndCommit]);
@@ -885,24 +831,22 @@ export default function EditorPage() {
   const currentDateElement = dateElement;
 
 
-  // New unified image upload handler
   const handleUnifiedImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setTempUploadedFile(event.target.files[0]);
       setShowImageUploadTypeModal(true);
-      event.target.value = ''; // Clear the input value to allow re-uploading the same file
+      event.target.value = ''; // Clear the input so same file can be selected again
     }
   };
 
-  // Handler for setting image as main product
   const handleSetAsProduct = (file: File) => {
     const newImageUrl = URL.createObjectURL(file);
     setProductImageUrl(newImageUrl);
 
-    // Reset product properties to default when a new product image is loaded
+    // Reset product transformations when a new product image is set
     setProductX(CANVAS_SIZE / 2);
     setProductY(CANVAS_SIZE / 2);
-    setProductScale(1); // Reset scale to 1 (will be re-scaled by useEffect after image loads)
+    setProductScale(1);
     setProductRotation(0);
     setProductOpacity(1);
     setProductBlurRadius(0);
@@ -910,24 +854,22 @@ export default function EditorPage() {
     setProductReflectionEnabled(false);
     setProductFlipX(1); setProductFlipY(1);
     setProductFilter('none');
-    setHasProductBeenScaledManually(false); // NEW: Reset manual scale flag for new product
+    setHasProductBeenScaledManually(false); // Reset this flag
     console.log('handleSetAsProduct: Resetting product state and manual flag to false.');
-    // onTransformEndCommit will be called by useEffect for initial scale, or later by user interaction
-    handleElementSelect('product');
-    setShowImageUploadTypeModal(false);
-    setTempUploadedFile(null);
+    handleElementSelect('product'); // Select the product element
+    setShowImageUploadTypeModal(false); // Close the modal
+    setTempUploadedFile(null); // Clear the temporary file
   };
 
-  // Handler for adding image as a new element
   const handleAddImageAsElement = (file: File) => {
     const newImageUrl = URL.createObjectURL(file);
     const newImageId = `image-${Date.now()}`;
     const newImage: ImageElement = {
       id: newImageId,
       url: newImageUrl,
-      x: 0, // Initial position, CanvasImageElement will adjust scale/center
-      y: 0, // Initial position, CanvasImageElement will adjust scale/center
-      scaleX: 1, // CanvasImageElement will calculate actual scale
+      x: 0, // Initial position will be set by CanvasImageElement
+      y: 0, // Initial position will be set by CanvasImageElement
+      scaleX: 1,
       scaleY: 1,
       rotation: 0,
       opacity: 1,
@@ -936,15 +878,14 @@ export default function EditorPage() {
       reflectionEnabled: false,
       flipX: 1, flipY: 1,
       filter: 'none',
-      width: undefined, // Will be set by onImageAddedAndLoaded
-      height: undefined, // Will be set by onImageAddedAndLoaded
+      width: undefined, // Will be set by CanvasImageElement after load
+      height: undefined, // Will be set by CanvasImageElement after load
     };
     setImageElements((prev) => [...prev, newImage]);
-    handleElementSelect('image', newImage.id);
-    // Do NOT set imageToMoveToBottomId here, as this is for regular images that should be on top
-    setRightSidebarView('properties'); // Switch to properties when adding image
-    setShowImageUploadTypeModal(false);
-    setTempUploadedFile(null);
+    handleElementSelect('image', newImage.id); // Select the newly added image
+    setRightSidebarView('properties'); // Switch to properties view
+    setShowImageUploadTypeModal(false); // Close the modal
+    setTempUploadedFile(null); // Clear the temporary file
   };
 
 
@@ -952,14 +893,14 @@ export default function EditorPage() {
     if (selectedCanvasElement === 'image' && selectedImageElementId) {
       setImageElements((prev) => prev.filter((imgEl) => imgEl.id !== selectedImageElementId));
       setSelectedImageElementId(null);
-      setSelectedCanvasElement('product'); // Default to product selection
+      setSelectedCanvasElement('product'); // Default to product after deleting an image element
       onTransformEndCommit();
     }
   }, [selectedCanvasElement, selectedImageElementId, onTransformEndCommit]);
 
   const currentImageElement = imageElements.find(el => el.id === selectedImageElementId);
 
-  // This handler is for "Cargar Imagen de Fondo" which adds a movable image to the canvas, and should be at the bottom
+  // New handler for "Cargar Imagen de Fondo"
   const handleCustomBackgroundFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
@@ -968,45 +909,34 @@ export default function EditorPage() {
       const newImage: ImageElement = {
         id: newImageId,
         url: newImageUrl,
-        x: 0, // Initial position, CanvasImageElement will adjust scale/center
-        y: 0, // Initial position, CanvasImageElement will adjust scale/center
-        scaleX: 1, // Initial scale to fill, user can resize
-        scaleY: 1,
-        rotation: 0,
-        opacity: 1,
-        blurRadius: 0,
-        shadowEnabled: false, shadowColor: '#000000', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, shadowOpacity: 0.5,
-        reflectionEnabled: false,
-        flipX: 1, flipY: 1,
-        filter: 'none',
-        width: undefined, // Will be set by onImageAddedAndLoaded
-        height: undefined, // Will be set by onImageAddedAndLoaded
+        x: 0, // Initial position will be set by CanvasImageElement
+        y: 0, // Initial position will be set by CanvasImageElement
+        scaleX: 1, scaleY: 1, rotation: 0, opacity: 1, blurRadius: 0, shadowEnabled: false, reflectionEnabled: false, flipX: 1, flipY: 1, filter: 'none',
+        shadowColor: '#000000', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, shadowOpacity: 0.5,
+        width: undefined, height: undefined,
       };
-      // Do NOT clear preset background here. User can have both.
       setImageElements((prev) => [...prev, newImage]);
       handleElementSelect('image', newImage.id); // Select the newly added image
-      setImageToMoveToBottomId(newImage.id); // Set the ID to trigger move to bottom
-      event.target.value = ''; // Clear the input value to allow re-uploading the same file
+      setImageToMoveToBottomId(newImage.id); // Request to move this new image to bottom
+      event.target.value = ''; // Clear the input so same file can be selected again
     }
   };
 
-  // This handler is for selecting a FIXED preset background (not movable image element)
   const handleSelectPresetBackground = (background: DisplayBackground) => {
     if (background.isPremium && !isUserPremium) {
       alert('Este fondo es premium. Por favor, actualiza tu plan para usarlo.');
       return;
     }
-    setSelectedPresetBackgroundUrl(background.url); // Set the fixed preset background
-    // Reset background properties to default when a new preset background is selected
+    setSelectedPresetBackgroundUrl(background.url);
+    // Reset background properties when a new preset is selected
     setBackgroundOpacity(1);
     setBackgroundBlurRadius(0);
     setBackgroundShadowEnabled(false); setBackgroundShadowColor('#000000'); setBackgroundShadowBlur(0); setBackgroundShadowOffsetX(0); setBackgroundShadowOffsetY(0); setBackgroundShadowOpacity(0.5);
     setBackgroundReflectionEnabled(false);
     setBackgroundFlipX(1); setBackgroundFlipY(1);
     setBackgroundFilter('none');
-    onTransformEndCommit();
-    // Do NOT clear imageElements here. User can have both.
-    setSelectedCanvasElement('background'); // Select the fixed background (though not transformable)
+    onTransformEndCommit(); // Save state after changing background
+    setSelectedCanvasElement('background'); // Select the background
   };
 
   const processImageWithReplicate = async () => {
@@ -1015,10 +945,11 @@ export default function EditorPage() {
       return;
     }
     alert('Esta función de "Editar recorte" es una simulación para demostrar una posible integración con IA. Para una funcionalidad real, necesitarías un servicio de procesamiento de imágenes (como Replicate AI) o implementar una herramienta de recorte directamente en el lienzo.');
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
     setProductImageUrl('https://via.placeholder.com/280/aaddcc/000000?text=PROCESSED+PRODUCT');
     onTransformEndCommit();
-    setShowMoreToolsDropdown(false); // Close dropdown after action
+    setShowMoreToolsDropdown(false);
   };
 
   const handleAiReferenceImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1039,23 +970,23 @@ export default function EditorPage() {
     }
 
     setIsGeneratingScene(true);
-    // Add a loading placeholder image to imageElements
-    const loadingImageId = `image-${Date.now()}`; // Ensure unique ID for loading image
+    // Add a loading image to the canvas immediately
+    const loadingImageId = `image-${Date.now()}`;
     const loadingImage: ImageElement = {
       id: loadingImageId,
       url: `https://placehold.co/200x200/eeeeee/333333?text=Generando...`,
-      x: 0, // Will be centered by CanvasImageElement
-      y: 0, // Will be centered by CanvasImageElement
+      x: 0, // Will be centered by CanvasImageElement after load
+      y: 0, // Will be centered by CanvasImageElement after load
       scaleX: 1, scaleY: 1, rotation: 0, opacity: 1, blurRadius: 0, shadowEnabled: false, reflectionEnabled: false, flipX: 1, flipY: 1, filter: 'none',
       shadowColor: '#000000', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, shadowOpacity: 0.5,
-      width: undefined, height: undefined, // Will be set by onImageAddedAndLoaded
+      width: undefined, height: undefined,
     };
     setImageElements((prev) => [...prev, loadingImage]);
     handleElementSelect('image', loadingImage.id); // Select the loading image
-    setImageToMoveToBottomId(loadingImage.id); // Set the ID to trigger move to bottom
+    setImageToMoveToBottomId(loadingImage.id); // Request to move this new image to bottom
 
     let finalPrompt = scenePrompt;
-    const apiKey = ""; // Leave as empty string. Canvas will provide the key at runtime.
+    const apiKey = ""; // API key will be provided by Canvas runtime
 
     try {
       if (aiReferenceImageFile) {
@@ -1064,8 +995,9 @@ export default function EditorPage() {
         await new Promise((resolve) => {
           reader.onloadend = resolve;
         });
-        const base64ImageData = reader.result.split(',')[1]; // Get base64 part
+        const base64ImageData = reader.result.split(',')[1];
 
+        // Call Gemini to describe the reference image
         const geminiPayload = {
           contents: [
             {
@@ -1099,6 +1031,7 @@ export default function EditorPage() {
         }
       }
 
+      // Call Imagen to generate the scene
       const imagenPayload = {
         instances: { prompt: finalPrompt },
         parameters: { "sampleCount": 1 }
@@ -1114,11 +1047,10 @@ export default function EditorPage() {
 
       if (imagenResult.predictions && imagenResult.predictions.length > 0 && imagenResult.predictions[0].bytesBase64Encoded) {
         const imageUrl = `data:image/png;base64,${imagenResult.predictions[0].bytesBase64Encoded}`;
-        // Update the loading image with the actual generated image
         setImageElements((prev) => prev.map(img =>
           img.id === loadingImageId ? { ...img, url: imageUrl, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
         ));
-        onTransformEndCommit();
+        onTransformEndCommit(); // Save state after AI image is loaded
       } else {
         alert('No se pudo generar la escena. Intenta con otra descripción.');
         console.error('Error de respuesta de la API de Imagen:', imagenResult);
@@ -1131,6 +1063,7 @@ export default function EditorPage() {
     } catch (error) {
       console.error('Error al llamar a la API de IA:', error);
       alert('Ocurrió un error al generar la escena con IA. Por favor, inténtalo de nuevo más tarde.');
+      // Update loading image to error state
       setImageElements((prev) => prev.map(img =>
         img.id === loadingImageId ? { ...img, url: `https://placehold.co/200x200/ff0000/ffffff?text=Error+AI`, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
       ));
@@ -1158,7 +1091,7 @@ export default function EditorPage() {
       try {
         const link = document.createElement('a');
         link.href = konvaCanvas.toDataURL('image/png', 1.0);
-        link.download = `pixafree_image.png`; // Simplified download name
+        link.download = `pixafree_image.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -1173,29 +1106,27 @@ export default function EditorPage() {
   };
 
   const handleDeleteElement = useCallback(() => {
-    // Store current selection to clear it first
     const currentSelectedElement = selectedCanvasElement;
     const currentSelectedId = selectedTextElementId || selectedShapeElementId || selectedDateElementId || selectedImageElementId;
 
-    // Clear selection immediately to detach transformer
-    // This will trigger the useEffect in CanvasEditor to clear transformer.nodes()
-    handleElementSelect(null); // This is the crucial change
+    // Deselect element immediately
+    handleElementSelect(null);
 
-    // Now proceed with deletion based on the stored type
+    // Perform deletion based on selected type
     if (currentSelectedElement === 'text' && currentSelectedId) {
       setTextElements((prev) => prev.filter((textEl) => textEl.id !== currentSelectedId));
     } else if (currentSelectedElement === 'shape' && currentSelectedId) {
       setShapeElements((prev) => prev.filter((shapeEl) => shapeEl.id !== currentSelectedId));
     } else if (currentSelectedElement === 'date' && currentSelectedId) {
-      setDateElement(null);
+      setDateElement(null); // Date element is unique, so set to null
     } else if (currentSelectedElement === 'image' && currentSelectedId) {
       setImageElements((prev) => prev.filter((imgEl) => imgEl.id !== currentSelectedId));
     } else if (currentSelectedElement === 'product') {
+      // Reset product image and its properties to default placeholder
       setProductImageUrl('https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload');
-      // Removed setSelectedFile(null); as it's no longer used directly
       setProductX(CANVAS_SIZE / 2);
       setProductY(CANVAS_SIZE / 2);
-      setProductScale(1); // Reset scale to 1 (will be re-scaled on next upload)
+      setProductScale(1);
       setProductRotation(0);
       setProductOpacity(1);
       setProductBlurRadius(0);
@@ -1203,10 +1134,11 @@ export default function EditorPage() {
       setProductReflectionEnabled(false);
       setProductFlipX(1); setProductFlipY(1);
       setProductFilter('none');
-      setHasProductBeenScaledManually(false); // NEW: Reset manual scale flag on delete
+      setHasProductBeenScaledManually(false); // Reset this flag as product is reset
       console.log('handleDeleteElement: Deleting product, resetting manual flag to false.');
-    } else if (currentSelectedElement === 'background') { // For the fixed preset background
-      setSelectedPresetBackgroundUrl(undefined); // Reset background to default (white)
+    } else if (currentSelectedElement === 'background') {
+      // Clear the selected preset background and reset its properties
+      setSelectedPresetBackgroundUrl(undefined);
       setBackgroundOpacity(1);
       setBackgroundBlurRadius(0);
       setBackgroundShadowEnabled(false); setBackgroundShadowColor('#000000'); setBackgroundShadowBlur(0); setBackgroundShadowOffsetX(0); setBackgroundShadowOffsetY(0); setBackgroundShadowOpacity(0.5);
@@ -1214,8 +1146,7 @@ export default function EditorPage() {
       setBackgroundFlipX(1); setBackgroundFlipY(1);
       setBackgroundFilter('none');
     }
-    // After deletion, commit the state change
-    onTransformEndCommit();
+    onTransformEndCommit(); // Save state after deletion
   }, [
     selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedDateElementId, selectedImageElementId,
     setTextElements, setShapeElements, setDateElement, setImageElements,
@@ -1228,19 +1159,21 @@ export default function EditorPage() {
     setBackgroundReflectionEnabled, setBackgroundFlipX, setBackgroundFlipY, setBackgroundFilter,
     onTransformEndCommit,
     CANVAS_SIZE,
-    handleElementSelect // Added dependency
+    handleElementSelect
   ]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Check if the event target is an input field or textarea to prevent deleting content while typing
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable)) {
+      return; // Do not delete if typing in an input field
+    }
     if (event.key === 'Delete' || event.key === 'Backspace') {
-      const activeElement = document.activeElement;
-      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable)) {
-        return;
-      }
       handleDeleteElement();
     }
   }, [handleDeleteElement]);
 
+  // Add event listener for keyboard shortcuts
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -1254,12 +1187,12 @@ export default function EditorPage() {
       if (originalText) {
         const newText: TextElement = {
           ...originalText,
-          id: `text-${Date.now()}`,
-          x: originalText.x + 20,
+          id: `text-${Date.now()}`, // Generate a new unique ID
+          x: originalText.x + 20, // Offset for visibility
           y: originalText.y + 20,
         };
         setTextElements((prev) => [...prev, newText]);
-        handleElementSelect('text', newText.id);
+        handleElementSelect('text', newText.id); // Select the new duplicated element
         onTransformEndCommit();
       }
     } else if (selectedCanvasElement === 'shape' && selectedShapeElementId) {
@@ -1267,15 +1200,16 @@ export default function EditorPage() {
       if (originalShape) {
         const newShape: ShapeElement = {
           ...originalShape,
-          id: `shape-${Date.now()}`,
-          x: originalShape.x + 20,
+          id: `shape-${Date.now()}`, // Generate a new unique ID
+          x: originalShape.x + 20, // Offset for visibility
           y: originalShape.y + 20,
         };
         setShapeElements((prev) => [...prev, newShape]);
-        handleElementSelect('shape', newShape.id);
+        handleElementSelect('shape', newShape.id); // Select the new duplicated element
         onTransformEndCommit();
       }
     } else if (selectedCanvasElement === 'date' && dateElement) {
+      // Date element is unique, so duplicating it means creating a new one
       const newDate: DateElement = {
         ...dateElement,
         id: `date-${Date.now()}`,
@@ -1290,12 +1224,12 @@ export default function EditorPage() {
       if (originalImage) {
         const newImage: ImageElement = {
           ...originalImage,
-          id: `image-${Date.now()}`,
-          x: originalImage.x + 20,
+          id: `image-${Date.now()}`, // Generate a new unique ID
+          x: originalImage.x + 20, // Offset for visibility
           y: originalImage.y + 20,
         };
         setImageElements((prev) => [...prev, newImage]);
-        handleElementSelect('image', newImage.id);
+        handleElementSelect('image', newImage.id); // Select the new duplicated element
         onTransformEndCommit();
       }
     } else {
@@ -1375,6 +1309,7 @@ export default function EditorPage() {
       return;
     }
 
+    // Apply copied style based on the type of the selected element and copied style
     if (selectedCanvasElement === 'text' && selectedTextElementId && copiedStyle.type === 'text') {
       handleUpdateTextElement(selectedTextElementId, copiedStyle.style);
       onTransformEndCommit();
@@ -1407,7 +1342,7 @@ export default function EditorPage() {
       idToMove = 'product';
       elementTypeToMove = 'product';
     } else if (selectedCanvasElement === 'background') {
-      // Fixed background cannot be reordered
+      // Fixed background cannot be reordered, only image elements can
       alert('El fondo preestablecido no se puede reordenar. Solo los elementos de imagen cargados o generados por IA pueden ser reordenados.');
       return;
     } else if (selectedCanvasElement === 'text' && selectedTextElementId) {
@@ -1433,8 +1368,8 @@ export default function EditorPage() {
   }, [selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedDateElementId, selectedImageElementId]);
 
   const onZOrderActionComplete = useCallback(() => {
-    setZOrderAction(null);
-    saveCurrentState();
+    setZOrderAction(null); // Clear the action after it's processed by CanvasEditor
+    saveCurrentState(); // Save state after Z-order change
   }, [saveCurrentState]);
 
   const handleFlip = useCallback((axis: 'x' | 'y') => {
@@ -1442,7 +1377,7 @@ export default function EditorPage() {
       setProductFlipX((prev) => (axis === 'x' ? prev * -1 : prev));
       setProductFlipY((prev) => (axis === 'y' ? prev * -1 : prev));
     } else if (selectedCanvasElement === 'background') {
-      // Fixed background does not flip independently, its flip is handled by the overall background properties
+      // Background flip applies to the fixed background
       setBackgroundFlipX((prev) => (axis === 'x' ? prev * -1 : prev));
       setBackgroundFlipY((prev) => (axis === 'y' ? prev * -1 : prev));
     } else if (selectedCanvasElement === 'text' && currentTextElement) {
@@ -1454,7 +1389,7 @@ export default function EditorPage() {
     } else if (selectedCanvasElement === 'image' && currentImageElement) {
       handleUpdateImageElement(currentImageElement.id, { flipX: axis === 'x' ? currentImageElement.flipX * -1 : currentImageElement.flipX, flipY: axis === 'y' ? currentImageElement.flipY * -1 : currentImageElement.flipY });
     }
-    onTransformEndCommit();
+    onTransformEndCommit(); // Save state after flip
   }, [selectedCanvasElement, currentTextElement, currentShapeElement, currentDateElement, currentImageElement, handleUpdateTextElement, handleUpdateShapeElement, handleUpdateDateElement, handleUpdateImageElement, onTransformEndCommit]);
 
   const handleApplyFilter = useCallback((filterType: 'none' | 'grayscale' | 'sepia') => {
@@ -1471,7 +1406,7 @@ export default function EditorPage() {
     } else if (selectedCanvasElement === 'image' && currentImageElement) {
       handleUpdateImageElement(currentImageElement.id, { filter: filterType });
     }
-    onTransformEndCommit();
+    onTransformEndCommit(); // Save state after filter change
   }, [selectedCanvasElement, currentTextElement, currentShapeElement, currentDateElement, currentImageElement, handleUpdateTextElement, handleUpdateShapeElement, handleUpdateDateElement, handleUpdateImageElement, onTransformEndCommit]);
 
   const handleToggleShadow = useCallback(() => {
@@ -1488,7 +1423,7 @@ export default function EditorPage() {
     } else if (selectedCanvasElement === 'image' && currentImageElement) {
       handleUpdateImageElement(currentImageElement.id, { shadowEnabled: !currentImageElement.shadowEnabled });
     }
-    onTransformEndCommit();
+    onTransformEndCommit(); // Save state after shadow toggle
   }, [selectedCanvasElement, currentTextElement, currentShapeElement, currentDateElement, currentImageElement, handleUpdateTextElement, handleUpdateShapeElement, handleUpdateDateElement, handleUpdateImageElement, onTransformEndCommit]);
 
   const handleToggleReflection = useCallback(() => {
@@ -1505,7 +1440,7 @@ export default function EditorPage() {
     } else if (selectedCanvasElement === 'image' && currentImageElement) {
       handleUpdateImageElement(currentImageElement.id, { reflectionEnabled: !currentImageElement.reflectionEnabled });
     }
-    onTransformEndCommit();
+    onTransformEndCommit(); // Save state after reflection toggle
   }, [selectedCanvasElement, currentTextElement, currentShapeElement, currentDateElement, currentImageElement, handleUpdateTextElement, handleUpdateShapeElement, handleUpdateDateElement, handleUpdateImageElement, onTransformEndCommit]);
 
 
@@ -1529,7 +1464,7 @@ export default function EditorPage() {
       setReflectionEnabled: setProductReflectionEnabled,
       setFilter: setProductFilter,
     };
-  } else if (selectedCanvasElement === 'background') { // Background is handled separately for properties view
+  } else if (selectedCanvasElement === 'background') {
     currentElementProps = {
       opacity: backgroundOpacity, blurRadius: backgroundBlurRadius,
       shadowEnabled: backgroundShadowEnabled, shadowColor: backgroundShadowColor, shadowBlur: backgroundShadowBlur, shadowOffsetX: backgroundShadowOffsetX, backgroundShadowOffsetY: backgroundShadowOffsetY, backgroundShadowOpacity: backgroundShadowOpacity,
@@ -1610,7 +1545,6 @@ export default function EditorPage() {
     };
   }
 
-  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (moreToolsRef.current && !moreToolsRef.current.contains(event.target as Node)) {
@@ -1623,114 +1557,79 @@ export default function EditorPage() {
     };
   }, []);
 
-  // Admin upload functions (PLACEHOLDER FOR USER'S AWS S3 / MEDIA API INTEGRATION)
   const handleAdminUploadPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       setIsUploadingAdminPreset(true);
-      // Simulate network delay for upload
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simulate API call to your backend
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
 
-      // --- START: YOUR AWS S3 / MEDIA API INTEGRATION HERE ---
-      // This is where you would send the 'file' to your backend API
-      // (e.g., https://pixafree.online/admin/media) for secure upload to S3.
-      // Your backend would then return the public URL of the uploaded image.
-      // Make sure to also send the `newPresetIsPremium` value to your backend.
-
-      // Example conceptual fetch request:
-      /*
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('isPremium', String(newPresetIsPremium)); // Send premium status
-
-      try {
-        const response = await fetch('https://pixafree.online/api/upload-admin-background', {
-          method: 'POST',
-          headers: {
-            // Include your authentication token here (e.g., from a login session)
-            'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('Error al subir el fondo a tu API de medios.');
-        }
-
-        const result = await response.json();
-        const imageUrlFromYourApi = result.url; // Assuming your API returns the URL
-        const uploadedId = `admin-uploaded-${Date.now()}`; // Or use ID from your backend
-
-        // Update local state to display the newly uploaded image (optional, for immediate feedback)
-        setAdminUploadedBackgrounds((prev) => [...prev, { id: uploadedId, url: imageUrlFromYourApi, isPremium: newPresetIsPremium }]);
-        alert("Fondo preestablecido subido exitosamente a tu sistema!");
-
-      } catch (error) {
-        console.error("Error uploading to your media API:", error);
-        alert("Error al subir el fondo. Revisa la consola para más detalles.");
-      }
-      */
-      // --- END: YOUR AWS S3 / MEDIA API INTEGRATION HERE ---
-
-      // For this demo, we'll just add it to local state (not persistent)
-      const newImageUrl = URL.createObjectURL(file);
-      const newId = `admin-local-${Date.now()}`;
+      const newImageUrl = URL.createObjectURL(file); // For local preview
+      const newId = `admin-local-${Date.now()}`; // Unique ID for local state
       setAdminUploadedBackgrounds((prev) => [...prev, { id: newId, url: newImageUrl, isPremium: newPresetIsPremium }]);
-      alert("Fondo preestablecido subido exitosamente (solo en esta sesión)!");
-      event.target.value = ''; // Clear the input value to allow re-uploading the same file
+      alert("Fondo preestablecido subido exitosamente (solo en esta sesión)!"); // Inform user
+      event.target.value = ''; // Clear the input so same file can be selected again
 
       setIsUploadingAdminPreset(false);
+      // In a real application, you would send this file to your backend API here:
+      /*
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('isPremium', String(newPresetIsPremium)); // Send premium status
+        const response = await fetch('https://pixafree.online/api/admin/upload-background', { // Replace with your actual API endpoint
+          method: 'POST',
+          body: formData,
+          // Add authentication headers if needed
+        });
+        if (!response.ok) {
+          throw new Error('Failed to upload preset to backend');
+        }
+        const uploadedData = await response.json();
+        // Update adminUploadedBackgrounds with actual URL/ID from backend if needed
+        setAdminUploadedBackgrounds((prev) => [...prev, { id: uploadedData.id, url: uploadedData.url, isPremium: uploadedData.isPremium }]);
+        alert("Fondo preestablecido subido exitosamente!");
+      } catch (error) {
+        console.error('Error uploading admin preset:', error);
+        alert("Error al subir el fondo preestablecido.");
+      } finally {
+        setIsUploadingAdminPreset(false);
+        event.target.value = '';
+      }
+      */
     }
   };
 
   const handleDeleteAdminPreset = async (idToDelete: string) => {
+    // In a real application, you would send a delete request to your backend API here.
     if (confirm("¿Estás seguro de que quieres eliminar este fondo preestablecido? (Esto no eliminará el archivo de tu servidor real)")) {
-      // Simulate network delay for deletion
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // --- START: YOUR AWS S3 / MEDIA API DELETION INTEGRATION HERE ---
-      // This is where you would send a request to your backend API
-      // to delete the image from S3. You'd likely send the ID or URL.
-
-      // Example conceptual fetch request:
-      /*
-      try {
-        const response = await fetch('https://pixafree.online/api/delete-admin-background', {
-          method: 'POST', // Or DELETE, depending on your API design
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
-          },
-          body: JSON.stringify({ id: idToDelete }), // Or { url: urlToDelete }
-        });
-
-        if (!response.ok) {
-          throw new Error('Error al eliminar el fondo de tu API de medios.');
-        }
-
-        alert("Fondo preestablecido eliminado exitosamente de tu sistema!");
-        // After successful deletion from your API, update local state:
-        setAdminUploadedBackgrounds((prev) => prev.filter((bg) => bg.id !== idToDelete));
-
-      } catch (error) {
-        console.error("Error deleting from your media API:", error);
-        alert("Error al eliminar el fondo. Revisa la consola para más detalles.");
-      }
-      */
-      // --- END: YOUR AWS S3 / MEDIA API DELETION INTEGRATION HERE ---
-
-      // For this demo, we'll just remove it from local state (not persistent)
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call delay
       setAdminUploadedBackgrounds((prev) => prev.filter((bg) => bg.id !== idToDelete));
       alert("Fondo preestablecido eliminado de esta sesión (no de tu servidor)!");
+      /*
+      try {
+        const response = await fetch(`https://pixafree.online/api/admin/delete-background/${idToDelete}`, { // Replace with your actual API endpoint
+          method: 'DELETE',
+          // Add authentication headers if needed
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete preset from backend');
+        }
+        setAdminUploadedBackgrounds((prev) => prev.filter((bg) => bg.id !== idToDelete));
+        alert("Fondo preestablecido eliminado exitosamente!");
+      } catch (error) {
+        console.error('Error deleting admin preset:', error);
+        alert("Error al eliminar el fondo preestablecido.");
+      }
+      */
     }
   };
 
-  // Combine hardcoded and locally "uploaded" admin presets for display in this demo
   const allPresetBackgrounds: DisplayBackground[] = [
     ...hardcodedPresetBackgrounds,
-    ...adminUploadedBackgrounds, // These are only for demonstration in this session
-    ...pixabaySampleImages, // Include Pixabay samples
-    ...pexelsSampleImages, // Include Pexels samples
+    ...adminUploadedBackgrounds,
+    ...pixabaySampleImages,
+    ...pexelsSampleImages,
   ];
 
   const handleGetProClick = () => {
@@ -1740,8 +1639,6 @@ export default function EditorPage() {
       `Para suscribirte, haz clic en "Suscribirse con PayPal" a continuación.\n\n` +
       `Es crucial entender: La integración de PayPal es una SIMULACIÓN. Para una integración real y segura de pagos con PayPal, necesitarías una lógica de backend robusta que maneje la creación y captura de órdenes de pago, la gestión de suscripciones y la seguridad de las claves API.`
     );
-    // In a real application, you would open a modal here with the PayPal button
-    // and subscription details.
   };
 
 
@@ -1775,7 +1672,6 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-6">
-          {/* Unified Image Upload Button */}
           <button
             onClick={() => unifiedImageUploadRef.current?.click()}
             className="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group"
@@ -1797,7 +1693,7 @@ export default function EditorPage() {
           <button
             onClick={() => {
               setRightSidebarView('backgrounds');
-              setIsGenerateSceneAIOpen(false); // Collapse AI scene generation when "Fondos" is clicked
+              setIsGenerateSceneAIOpen(false); // Close AI section when switching to backgrounds
             }}
             className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${rightSidebarView === 'backgrounds' ? 'text-blue-600 font-semibold' : ''}`}
             title="Fondos"
@@ -1807,7 +1703,7 @@ export default function EditorPage() {
           </button>
 
           <button
-            onClick={() => handleAddText()} // Simplified to directly add text
+            onClick={() => handleAddText()}
             className="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group"
             title="Añadir Texto"
           >
@@ -1824,7 +1720,6 @@ export default function EditorPage() {
             <span>Forma</span>
           </button>
 
-          {/* New/Moved Buttons for Top Bar */}
           <button
             onClick={processImageWithReplicate}
             className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${!isProductSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1864,7 +1759,16 @@ export default function EditorPage() {
             <span>Propiedades</span>
           </button>
 
-          {/* "Más Herramientas" dropdown button */}
+          {/* NEW: Toggle Center Guides Button */}
+          <button
+            onClick={() => setShowCenterGuides((prev) => !prev)}
+            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${showCenterGuides ? 'text-blue-600 font-semibold' : ''}`}
+            title="Alternar Guías Centrales"
+          >
+            <Ruler size={24} className="group-hover:scale-110 transition-transform" />
+            <span>Guías</span>
+          </button>
+
           <div className="relative">
             <button
               ref={moreToolsRef}
@@ -1941,7 +1845,6 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* NEW: Obtener PRO Button */}
           <button
             onClick={handleGetProClick}
             className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2 text-sm transition duration-300 ease-in-out transform hover:scale-105 shadow-md"
@@ -1968,7 +1871,6 @@ export default function EditorPage() {
             selectedCanvasElement={selectedCanvasElement}
             onElementSelect={handleElementSelect}
 
-            // Product props
             productX={productX}
             productY={productY}
             productScale={productScale}
@@ -1989,9 +1891,8 @@ export default function EditorPage() {
             setProductX={setProductX}
             setProductY={setProductY}
             setProductScale={setProductScale}
-            setHasProductBeenScaledManually={setHasProductBeenScaledManually} // NEW PROP
+            setHasProductBeenScaledManually={setHasProductBeenScaledManually}
 
-            // Background props
             selectedPresetBackgroundUrl={selectedPresetBackgroundUrl}
             backgroundOpacity={backgroundOpacity}
             backgroundBlurRadius={backgroundBlurRadius}
@@ -2006,49 +1907,43 @@ export default function EditorPage() {
             backgroundFlipY={backgroundFlipY}
             backgroundFilter={backgroundFilter}
 
-            // Text elements
             textElements={textElements}
             selectedTextElementId={selectedTextElementId}
             onTextUpdate={handleUpdateTextElement}
 
-            // Shape elements
             shapeElements={shapeElements}
             selectedShapeElementId={selectedShapeElementId}
             onShapeUpdate={handleUpdateShapeElement}
 
-            // Date element
             dateElement={dateElement}
             selectedDateElementId={selectedDateElementId}
             onDateUpdate={handleUpdateDateElement}
 
-            // Image elements
             imageElements={imageElements}
             selectedImageElementId={selectedImageElementId}
             onImageUpdate={handleUpdateImageElement}
-            onImageAddedAndLoaded={handleImageAddedAndLoaded} // Passing updated handler
+            onImageAddedAndLoaded={handleImageAddedAndLoaded}
 
             onTransformEndCommit={onTransformEndCommit}
             canvasSize={CANVAS_SIZE}
-            // onProductImageLoadedAndScaled={handleProductImageLoadedAndScaled} // REMOVED FROM HERE
 
-            // Z-order
             zOrderAction={zOrderAction}
             onZOrderActionComplete={onZOrderActionComplete}
             imageToMoveToBottomId={imageToMoveToBottomId}
             onImageMovedToBottom={onImageMovedToBottom}
+            showCenterGuides={showCenterGuides}
           />
         </div>
 
         <div className="w-80 bg-white p-4 border-l border-gray-200 flex flex-col gap-3 overflow-y-auto shadow-inner flex-shrink-0">
           {rightSidebarView === 'backgrounds' ? (
-            // Backgrounds View
             <div className="flex flex-col gap-4">
               <h2 className="text-xl font-bold text-gray-800">Opciones de Fondo</h2>
 
               <CollapsibleSection
                 title="Generar Escena con IA"
-                isOpen={isGenerateSceneAIOpen} // Use new state
-                setIsOpen={setIsGenerateSceneAIOpen} // Pass setter for toggling
+                isOpen={isGenerateSceneAIOpen}
+                setIsOpen={setIsGenerateSceneAIOpen}
                 icon={Sparkles}
               >
                 <div className="flex flex-col gap-3">
@@ -2123,7 +2018,7 @@ export default function EditorPage() {
               </CollapsibleSection>
 
               <CollapsibleSection title="Fondos Preestablecidos" isOpen={true} setIsOpen={() => {}} icon={Layout}>
-                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2"> {/* Added max-h and overflow */}
+                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
                   {allPresetBackgrounds.map((bg) => (
                     <div
                       key={bg.id}
@@ -2132,7 +2027,6 @@ export default function EditorPage() {
                       }`}
                       onClick={() => handleSelectPresetBackground(bg)}
                     >
-                      {/* Image of sample background */}
                       <img src={bg.url} alt={`Fondo ${bg.id}`} className="w-full h-full object-cover" />
                       {bg.isPremium && (
                         <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
@@ -2147,7 +2041,6 @@ export default function EditorPage() {
                 </div>
               </CollapsibleSection>
 
-              {/* Admin Preset Backgrounds Section (FOR YOUR INTEGRATION) */}
               <CollapsibleSection title="Administrar Fondos Personalizados (Integrar con tu API)" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
                 <p className="text-sm text-gray-600 mb-2">
                   Aquí puedes subir nuevos fondos preestablecidos que se guardarán en tu propio sistema de medios (ej. `https://pixafree.online/admin/media`).
@@ -2205,7 +2098,6 @@ export default function EditorPage() {
                         key={preset.id}
                         className="relative w-full h-24 rounded-md overflow-hidden group border border-gray-200"
                       >
-                        {/* Image of sample background */}
                         <img src={preset.url} alt={`Admin Uploaded ${preset.id}`} className="w-full h-full object-cover" />
                         {preset.isPremium && (
                           <span className="absolute top-1 left-1 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
@@ -2233,11 +2125,9 @@ export default function EditorPage() {
 
             </div>
           ) : (
-            // Properties View (Flattened)
             <>
               <h2 className="text-xl font-bold text-gray-800 mb-2">Propiedades del Objeto</h2>
 
-              {/* Toggle for User Premium Status (for demo) - Moved here */}
               <div className="flex items-center justify-between p-2 bg-yellow-100 rounded-md border border-yellow-200 mb-4">
                 <span className="text-sm font-semibold text-yellow-800">Simular Usuario Premium:</span>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -2258,7 +2148,6 @@ export default function EditorPage() {
                 </div>
               )}
 
-              {/* Product Specific Properties */}
               {isProductSelected && (
                 <>
                   <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades del Producto</h3>
@@ -2278,7 +2167,6 @@ export default function EditorPage() {
                 </>
               )}
 
-              {/* Background Specific Properties (for fixed preset background) */}
               {selectedCanvasElement === 'background' && (
                 <>
                   <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades del Fondo</h3>
@@ -2298,7 +2186,6 @@ export default function EditorPage() {
                 </>
               )}
 
-              {/* Text Specific Properties */}
               {isTextSelected && currentTextElement && (
                 <>
                   <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades del Texto</h3>
@@ -2385,7 +2272,6 @@ export default function EditorPage() {
                       </button>
                     </div>
                   </div>
-                  {/* Text Decoration and Style */}
                   <div className="col-span-1">
                     <label htmlFor="textDecoration" className="block text-sm font-medium text-gray-700">Estilo de Texto</label>
                     <div className="flex gap-2 mt-1">
@@ -2415,7 +2301,6 @@ export default function EditorPage() {
                       </button>
                     </div>
                   </div>
-                  {/* Text Stroke */}
                   <div>
                     <label htmlFor="textStrokeColor" className="block text-sm font-medium text-gray-700">Color de Contorno</label>
                     <input
@@ -2445,7 +2330,6 @@ export default function EditorPage() {
                 </>
               )}
 
-              {/* Shape Specific Properties */}
               {isShapeSelected && currentShapeElement && (
                 <>
                   <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades de la Figura</h3>
@@ -2538,7 +2422,6 @@ export default function EditorPage() {
                 </>
               )}
 
-              {/* Date Specific Properties */}
               {isDateSelected && currentDateElement && (
                 <>
                   <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades de la Fecha</h3>
@@ -2624,193 +2507,182 @@ export default function EditorPage() {
                 </>
               )}
 
-              {/* Image Specific Properties */}
               {isImageSelected && currentImageElement && (
                 <>
                   <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades de la Imagen</h3>
-                  <p className="text-sm text-gray-500">Usa los controles de abajo para editar esta imagen.</p>
-                </>
-              )}
-
-              {/* Common Properties for selected editable elements (Product, Text, Shape, Date, Image) */}
-              {selectedCanvasElement && selectedCanvasElement !== 'background' && ( // Exclude fixed background from common properties
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Ajustes Comunes</h3>
                   <div>
-                    <label htmlFor={`${selectedCanvasElement}Opacity`} className="block text-sm font-medium text-gray-700">Opacidad: {(currentElementProps.opacity * 100).toFixed(0)}%</label>
+                    <label htmlFor="imageOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(currentImageElement.opacity * 100).toFixed(0)}%</label>
                     <input
-                      id={`${selectedCanvasElement}Opacity`}
+                      id="imageOpacity"
                       type="range"
                       min="0"
                       max="1"
                       step="0.01"
-                      value={currentElementProps.opacity}
-                      onChange={(e) => currentElementProps.setOpacity(Number(e.target.value))}
+                      value={currentImageElement.opacity}
+                      onChange={(e) => handleUpdateImageElement(selectedImageElementId!, { opacity: Number(e.target.value) })}
                       onMouseUp={onTransformEndCommit}
                       onTouchEnd={onTransformEndCommit}
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
+                </>
+              )}
 
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <button
-                      onClick={() => handleFlip('x')}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-200 text-sm font-semibold"
-                      title="Voltear Horizontal"
-                    >
-                      <FlipHorizontal size={16} /> Voltear Horizontal
-                    </button>
-                    <button
-                      onClick={() => handleFlip('y')}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-200 text-sm font-semibold"
-                      title="Voltear Vertical"
-                    >
-                      <FlipVertical size={16} /> Voltear Vertical
-                    </button>
-                  </div>
-
-                  <div className="mt-4">
-                    <label htmlFor={`${selectedCanvasElement}Blur`} className="block text-sm font-medium text-gray-700">Radio de Desenfoque: {currentElementProps.blurRadius.toFixed(0)}</label>
+              {isAnyEditableElementSelected && (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Ajustes Generales</h3>
+                  <div>
+                    <label htmlFor="blurRadius" className="block text-sm font-medium text-gray-700">Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
                     <input
-                      id={`${selectedCanvasElement}Blur`}
+                      id="blurRadius"
                       type="range"
                       min="0"
                       max="20"
                       value={currentElementProps.blurRadius}
-                      onChange={(e) => currentElementProps.setBlurRadius(Number(e.target.value))}
+                      onChange={(e) => { currentElementProps.setBlurRadius(Number(e.target.value)); onTransformEndCommit(); }}
                       onMouseUp={onTransformEndCommit}
                       onTouchEnd={onTransformEndCommit}
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
 
-                  <div className="mt-4">
-                    <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center justify-between">
-                      Habilitar Sombras
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm font-medium text-gray-700">Sombra</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
+                        value=""
+                        className="sr-only peer"
                         checked={currentElementProps.shadowEnabled}
-                        onChange={(e) => currentElementProps.setShadowEnabled(e.target.checked)}
-                        className="form-checkbox h-4 w-4 text-blue-600 rounded"
+                        onChange={handleToggleShadow}
                       />
-                    </h4>
-                    {currentElementProps.shadowEnabled && (
-                      <div className="grid grid-cols-1 gap-3">
-                        <div>
-                          <label htmlFor={`${selectedCanvasElement}ShadowColor`} className="block text-sm font-medium text-gray-700">Color de Sombra</label>
-                          <input
-                            id={`${selectedCanvasElement}ShadowColor`}
-                            type="color"
-                            value={currentElementProps.shadowColor}
-                            onChange={(e) => currentElementProps.setShadowColor(e.target.value)}
-                            onBlur={onTransformEndCommit}
-                            className="w-full h-10 rounded-lg cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={`${selectedCanvasElement}ShadowBlur`} className="block text-sm font-medium text-gray-700">Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
-                          <input
-                            id={`${selectedCanvasElement}ShadowBlur`}
-                            type="range"
-                            min="0"
-                            max="50"
-                            value={currentElementProps.shadowBlur}
-                            onChange={(e) => currentElementProps.setShadowBlur(Number(e.target.value))}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={`${selectedCanvasElement}ShadowOffsetX`} className="block text-sm font-medium text-gray-700">Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
-                          <input
-                            id={`${selectedCanvasElement}ShadowOffsetX`}
-                            type="range"
-                            min="-50"
-                            max="50"
-                            value={currentElementProps.shadowOffsetX}
-                            onChange={(e) => currentElementProps.setShadowOffsetX(Number(e.target.value))}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={`${selectedCanvasElement}ShadowOffsetY`} className="block text-sm font-medium text-gray-700">Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
-                          <input
-                            id={`${selectedCanvasElement}ShadowOffsetY`}
-                            type="range"
-                            min="-50"
-                            max="50"
-                            value={currentElementProps.shadowOffsetY}
-                            onChange={(e) => currentElementProps.setShadowOffsetY(Number(e.target.value))}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={`${selectedCanvasElement}ShadowOpacity`} className="block text-sm font-medium text-gray-700">Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
-                          <input
-                            id={`${selectedCanvasElement}ShadowOpacity`}
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={currentElementProps.shadowOpacity}
-                            onChange={(e) => currentElementProps.setShadowOpacity(Number(e.target.value))}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                    )}
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
                   </div>
+                  {currentElementProps.shadowEnabled && (
+                    <div className="flex flex-col gap-2 p-2 bg-gray-100 rounded-md mt-2">
+                      <div>
+                        <label htmlFor="shadowColor" className="block text-sm font-medium text-gray-700">Color de Sombra</label>
+                        <input
+                          id="shadowColor"
+                          type="color"
+                          value={currentElementProps.shadowColor}
+                          onChange={(e) => { currentElementProps.setShadowColor(e.target.value); onTransformEndCommit(); }}
+                          onBlur={onTransformEndCommit}
+                          className="w-full h-10 rounded-lg cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="shadowBlur" className="block text-sm font-medium text-gray-700">Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
+                        <input
+                          id="shadowBlur"
+                          type="range"
+                          min="0"
+                          max="20"
+                          value={currentElementProps.shadowBlur}
+                          onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
+                          onMouseUp={onTransformEndCommit}
+                          onTouchEnd={onTransformEndCommit}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="shadowOffsetX" className="block text-sm font-medium text-gray-700">Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
+                        <input
+                          id="shadowOffsetX"
+                          type="range"
+                          min="-20"
+                          max="20"
+                          value={currentElementProps.shadowOffsetX}
+                          onChange={(e) => { currentElementProps.setShadowOffsetX(Number(e.target.value)); onTransformEndCommit(); }}
+                          onMouseUp={onTransformEndCommit}
+                          onTouchEnd={onTransformEndCommit}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="shadowOffsetY" className="block text-sm font-medium text-gray-700">Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
+                        <input
+                          id="shadowOffsetY"
+                          type="range"
+                          min="-20"
+                          max="20"
+                          value={currentElementProps.shadowOffsetY}
+                          onChange={(e) => { currentElementProps.setShadowOffsetY(Number(e.target.value)); onTransformEndCommit(); }}
+                          onMouseUp={onTransformEndCommit}
+                          onTouchEnd={onTransformEndCommit}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="shadowOpacity" className="block text-sm font-medium text-gray-700">Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
+                        <input
+                          id="shadowOpacity"
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={currentElementProps.shadowOpacity}
+                          onChange={(e) => { currentElementProps.setShadowOpacity(Number(e.target.value)); onTransformEndCommit(); }}
+                          onMouseUp={onTransformEndCommit}
+                          onTouchEnd={onTransformEndCommit}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="mt-4">
-                    <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center justify-between">
-                      Habilitar Reflejo
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm font-medium text-gray-700">Reflejo</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
+                        value=""
+                        className="sr-only peer"
                         checked={currentElementProps.reflectionEnabled}
-                        onChange={(e) => currentElementProps.setReflectionEnabled(e.target.checked)}
-                        className="form-checkbox h-4 w-4 text-blue-600 rounded"
+                        onChange={handleToggleReflection}
                       />
-                    </h4>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
                   </div>
 
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">Filtro</label>
-                    <div className="flex gap-2 mt-1">
-                      <button
-                        onClick={() => handleApplyFilter('none')}
-                        className={`px-3 py-1 rounded-md text-sm font-semibold ${currentElementProps.filter === 'none' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        Ninguno
-                      </button>
-                      <button
-                        onClick={() => handleApplyFilter('grayscale')}
-                        className={`px-3 py-1 rounded-md text-sm font-semibold ${currentElementProps.filter === 'grayscale' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        Gris
-                      </button>
-                      <button
-                        onClick={() => handleApplyFilter('sepia')}
-                        className={`px-3 py-1 rounded-md text-sm font-semibold ${currentElementProps.filter === 'sepia' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        Sepia
-                      </button>
-                    </div>
+                  <h4 className="text-md font-semibold text-gray-700 mt-4 mb-2">Voltear</h4>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleFlip('x')}
+                      className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300 transition-colors"
+                    >
+                      Voltear Horizontal
+                    </button>
+                    <button
+                      onClick={() => handleFlip('y')}
+                      className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300 transition-colors"
+                    >
+                      Voltear Vertical
+                    </button>
                   </div>
 
-                  <CollapsibleSection title="Ajustar (No implementado)" isOpen={isAdjustOpen} setIsOpen={setIsAdjustOpen} icon={Sun} className="mt-4">
-                    <p className="text-sm text-gray-500">Brillo, Contraste, Saturación (no implementado)</p>
-                  </CollapsibleSection>
-
-                  <CollapsibleSection title="Textura (No implementado)" isOpen={isTextureOpen} setIsOpen={setIsTextureOpen} icon={Layout} className="mt-4">
-                    <p className="text-sm text-gray-500">Añadir texturas (no implementado)</p>
-                  </CollapsibleSection>
+                  <h4 className="text-md font-semibold text-gray-700 mt-4 mb-2">Filtros</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleApplyFilter('none')}
+                      className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'none' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      Ninguno
+                    </button>
+                    <button
+                      onClick={() => handleApplyFilter('grayscale')}
+                      className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'grayscale' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      Escala de Grises
+                    </button>
+                    <button
+                      onClick={() => handleApplyFilter('sepia')}
+                      className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'sepia' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      Sepia
+                    </button>
+                  </div>
                 </>
               )}
             </>
@@ -2818,28 +2690,26 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Image Upload Type Modal */}
       {showImageUploadTypeModal && tempUploadedFile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
             <h3 className="text-lg font-bold mb-4">¿Cómo quieres usar esta imagen?</h3>
-            <p className="text-sm text-gray-600 mb-6">Puedes establecerla como tu producto principal o añadirla como un elemento de imagen movible.</p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => handleSetAsProduct(tempUploadedFile)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                className="bg-blue-600 text-white py-2 px-4 rounded-md text-base font-semibold hover:bg-blue-700 transition-colors"
               >
-                Establecer como Producto Principal
+                Establecer como Imagen de Producto
               </button>
               <button
                 onClick={() => handleAddImageAsElement(tempUploadedFile)}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200"
+                className="bg-green-600 text-white py-2 px-4 rounded-md text-base font-semibold hover:bg-green-700 transition-colors"
               >
-                Añadir como Elemento de Imagen
+                Añadir como Elemento en el Lienzo
               </button>
               <button
                 onClick={() => { setShowImageUploadTypeModal(false); setTempUploadedFile(null); }}
-                className="text-gray-500 hover:text-gray-700 mt-2 text-sm"
+                className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md text-base font-semibold hover:bg-gray-300 transition-colors"
               >
                 Cancelar
               </button>
