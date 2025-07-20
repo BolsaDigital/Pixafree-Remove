@@ -6,8 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   Download, Type, Image as ImageIcon, Layout, Circle, Square, Calendar, Trash2, Undo2, Redo2, Sparkles, Plus, Palette, TextCursorInput, PenTool, CreditCard, DollarSign,
-  Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown, PlusSquare, RotateCcw, RotateCw, ImageMinus,
-  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler // Added Ruler icon
+  Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown, PlusSquare, RotateCcw, RotateCw, ImageMinus, // 'Blur' removed
+  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler // 'Ruler' added
 } from 'lucide-react';
 
 // Firebase imports (kept for general app functionality like history, authentication)
@@ -302,7 +302,6 @@ export default function EditorPage() {
   const adminUploadPresetRef = useRef<HTMLInputElement>(null);
   const aiReferenceImageRef = useRef<HTMLInputElement>(null);
 
-  // NEW STATE: For toggling center guides
   const [showCenterGuides, setShowCenterGuides] = useState(true);
 
 
@@ -995,6 +994,14 @@ export default function EditorPage() {
         await new Promise((resolve) => {
           reader.onloadend = resolve;
         });
+
+        if (reader.result === null || typeof reader.result !== 'string') {
+          console.error("FileReader.result es null o no es una cadena.");
+          alert('Error al leer la imagen de referencia. Intenta con otra imagen.');
+          setIsGeneratingScene(false);
+          setImageElements((prev) => prev.filter(img => img.id !== loadingImageId)); // Elimina la imagen de carga
+          return;
+        }
         const base64ImageData = reader.result.split(',')[1];
 
         // Call Gemini to describe the reference image
