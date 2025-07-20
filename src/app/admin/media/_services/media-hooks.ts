@@ -4,6 +4,7 @@ import { Media } from '@prisma/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useEffect, useRef, useState, MutableRefObject } from 'react'; // Importa MutableRefObject
+import { toast } from 'sonner'; // ¡Confirmado! Esta línea está presente y correcta.
 
 import { generateRandomKey } from '@/lib/crypto';
 import { SortOrder } from '@/lib/schema';
@@ -96,7 +97,7 @@ export const useUploadFiles = () => {
         uploadFile(file);
       }
     }
-  }, [files.length, isUploading, files]); // Añade 'files' como dependencia para asegurar el re-renderizado cuando 'files' cambia
+  }, [files.length, isUploading, files, uploadFile]); // Añade 'uploadFile' a las dependencias del useEffect
 
   return {
     files,
