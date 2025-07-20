@@ -1,5 +1,5 @@
 // src/components/CanvasEditor.tsx
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, Dispatch, SetStateAction } from 'react';
 import { Stage, Layer, Image, Rect, Circle, Text, Transformer } from 'react-konva';
 import useImage from 'use-image';
 import { KonvaEventObject } from 'konva/lib/Node';
@@ -187,6 +187,8 @@ interface CanvasEditorProps {
   onZOrderActionComplete: () => void;
   imageToMoveToBottomId: string | null;
   onImageMovedToBottom: (id: string) => void;
+  // NEW: Prop for center guides visibility
+  showCenterGuides: boolean;
 }
 
 const CanvasEditor: React.FC<CanvasEditorProps> = ({
@@ -256,6 +258,7 @@ const CanvasEditor: React.FC<CanvasEditorProps> = ({
   onZOrderActionComplete,
   imageToMoveToBottomId,
   onImageMovedToBottom,
+  showCenterGuides, // NEW PROP
 }) => {
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
@@ -763,6 +766,32 @@ const CanvasEditor: React.FC<CanvasEditorProps> = ({
             offsetX={dateElement.flipX === -1 ? dateElement.fontSize * dateElement.text.length / 2 : 0} // Adjust offset for flip (rough estimate)
             offsetY={dateElement.flipY === -1 ? dateElement.fontSize / 2 : 0} // Adjust offset for flip (rough estimate)
           />
+        )}
+
+        {/* Center Guides */}
+        {showCenterGuides && (
+          <>
+            {/* Horizontal Guide */}
+            <Rect
+              x={0}
+              y={canvasSize / 2 - 0.5} // Half of strokeWidth to center the line
+              width={canvasSize}
+              height={1} // Stroke width
+              fill="red"
+              listening={false} // Make it not interactive
+              opacity={0.7}
+            />
+            {/* Vertical Guide */}
+            <Rect
+              x={canvasSize / 2 - 0.5} // Half of strokeWidth to center the line
+              y={0}
+              width={1} // Stroke width
+              height={canvasSize}
+              fill="red"
+              listening={false} // Make it not interactive
+              opacity={0.7}
+            />
+          </>
         )}
 
         <Transformer
