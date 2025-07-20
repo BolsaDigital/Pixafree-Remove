@@ -1172,7 +1172,7 @@ export default function EditorPage() {
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     // Check if the event target is an input field or textarea to prevent deleting content while typing
     const activeElement = document.activeElement;
-    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable)) {
+    if (activeElement instanceof HTMLElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable)) {
       return; // Do not delete if typing in an input field
     }
     if (event.key === 'Delete' || event.key === 'Backspace') {
