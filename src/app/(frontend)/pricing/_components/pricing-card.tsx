@@ -63,7 +63,7 @@ const PricingCard = ({
                 format={{
                   style: 'decimal',
                   currency: 'USD',
-                  trailingZeroDisplay: 'stripIfInteger',
+                 // trailingZeroDisplay: 'stripIfInteger',
                 }}
                 prefix={getCurrencySymbol('USD')}
                 value={price}
