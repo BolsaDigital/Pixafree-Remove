@@ -1709,8 +1709,8 @@ export default function EditorPage() {
           <button
             onClick={handleDuplicateElement}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', opacity: !isAnyEditableElementSelected ? 0.5 : 1, cursor: !isAnyEditableElementSelected ? 'not-allowed' : 'pointer', transition: 'color 0.2s' }}
-            title="Duplicar Elemento Seleccionado"
             disabled={!isAnyEditableElementSelected}
+            title="Duplicar Elemento Seleccionado"
           >
             <PlusSquare size={24} />
             <span style={{ fontSize: '0.75rem' }}>Duplicar</span>
@@ -1859,8 +1859,8 @@ export default function EditorPage() {
 
             imageElements={imageElements}
             selectedImageElementId={selectedImageElementId}
-            onImageUpdate={handleImageUpdate}
-            onImageAddedAndLoaded={onImageAddedAndLoaded}
+            onImageUpdate={handleUpdateImageElement} {/* <--- CORRECCIÓN AQUÍ */}
+            onImageAddedAndLoaded={handleImageAddedAndLoaded}
 
             onTransformEndCommit={onTransformEndCommit}
             canvasSize={CANVAS_SIZE}
@@ -2516,7 +2516,7 @@ export default function EditorPage() {
                             value={currentElementProps.shadowBlur}
                             onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
                             onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndEnd}
+                            onTouchEnd={onTransformEndCommit}
                             style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
