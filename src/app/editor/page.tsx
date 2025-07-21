@@ -1537,9 +1537,9 @@ export default function EditorPage() {
       setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
-      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
+      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { offsetY: val }), // Corrected here
+      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }), // Corrected here
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateImageElement(selectedImageElementId!, { filter: val }),
@@ -1986,7 +1986,6 @@ export default function EditorPage() {
                     <label style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <input
                         type="radio"
-                        // Removed formRadio: 'true' as it's not a valid inline style property
                         style={{ color: '#3b82f6' }}
                         name="presetType"
                         value="free"
@@ -1998,7 +1997,6 @@ export default function EditorPage() {
                     <label style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <input
                         type="radio"
-                        // Removed formRadio: 'true' as it's not a valid inline style property
                         style={{ color: '#3b82f6' }}
                         name="presetType"
                         value="premium"
