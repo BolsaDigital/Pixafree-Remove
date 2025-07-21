@@ -1,19 +1,19 @@
 // src/app/editor/page.tsx
-'use client';
+'use client'; // <--- ¡Asegúrate de que esta línea esté aquí!
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
-  Download, Image as ImageIcon, Layout, Sparkles, Plus, TextCursorInput, PenTool, ImageMinus,
-  Trash2, Undo2, Redo2, Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown,
-  PlusSquare, Settings, MoreHorizontal, Ruler, Palette as PaletteIcon, ChevronRight
+  Download, Type, Image as ImageIcon, Layout, Circle, Square, Calendar, Trash2, Undo2, Redo2, Sparkles, Plus, Palette, TextCursorInput, PenTool, CreditCard, DollarSign,
+  Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown, PlusSquare, RotateCcw, RotateCw, ImageMinus,
+  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler
 } from 'lucide-react';
 
 // Firebase imports (kept for general app functionality like history, authentication)
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, signInAnonymously, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, signInAnonymously, signInWithCustomToken, Auth } from 'firebase/auth';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, Firestore } from 'firebase/firestore';
 
 const DynamicCanvasEditor = dynamic(
   () => import('@/components/CanvasEditor'),
@@ -119,8 +119,8 @@ interface ImageElement {
   flipX: number;
   flipY: number;
   filter: 'none' | 'grayscale' | 'sepia';
-  width?: number;
-  height?: number;
+  width?: number; // Added to interface
+  height?: number; // Added to interface
 }
 
 interface CanvasState {
@@ -1644,16 +1644,16 @@ export default function EditorPage() {
 
 
   return (
-    <div className="flex flex-col h-screen font-sans bg-gray-100">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6' }}>
       {/* Header */}
-      <header className="bg-white shadow-md p-4 flex items-center justify-between z-10">
-        <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-gray-800 mr-4">📸 Pixafree</h1>
-          <div className="flex space-x-2">
+      <header style={{ backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginRight: '1rem' }}>📸 Pixafree</h1>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
               onClick={handleUndo}
               disabled={historyPointer <= 0}
-              className={`p-2 rounded-full ${historyPointer <= 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-700'}`}
+              style={{ padding: '0.5rem', borderRadius: '9999px', transition: 'all 0.2s', backgroundColor: historyPointer <= 0 ? '#e5e7eb' : '#e0f2fe', color: historyPointer <= 0 ? '#6b7280' : '#1d4ed8', cursor: historyPointer <= 0 ? 'not-allowed' : 'pointer' }}
               title="Deshacer"
             >
               <Undo2 size={20} />
@@ -1661,7 +1661,7 @@ export default function EditorPage() {
             <button
               onClick={handleRedo}
               disabled={historyPointer >= history.length - 1}
-              className={`p-2 rounded-full ${historyPointer >= history.length - 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-700'}`}
+              style={{ padding: '0.5rem', borderRadius: '9999px', transition: 'all 0.2s', backgroundColor: historyPointer >= history.length - 1 ? '#e5e7eb' : '#e0f2fe', color: historyPointer >= history.length - 1 ? '#6b7280' : '#1d4ed8', cursor: historyPointer >= history.length - 1 ? 'not-allowed' : 'pointer' }}
               title="Rehacer"
             >
               <Redo2 size={20} />
@@ -1670,117 +1670,117 @@ export default function EditorPage() {
         </div>
 
         {/* Main Tools */}
-        <div className="flex space-x-6">
-          <button onClick={() => unifiedImageUploadRef.current?.click()} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Subir Imagen">
-            <input type="file" accept="image/*" onChange={handleUnifiedImageUpload} className="hidden" ref={unifiedImageUploadRef} />
+        <div style={{ display: 'flex', gap: '1.5rem' }}>
+          <button onClick={() => unifiedImageUploadRef.current?.click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', transition: 'color 0.2s' }} title="Subir Imagen">
+            <input type="file" accept="image/*" onChange={handleUnifiedImageUpload} style={{ display: 'none' }} ref={unifiedImageUploadRef} />
             <ImageIcon size={24} />
-            <span className="text-xs">Imagen</span>
+            <span style={{ fontSize: '0.75rem' }}>Imagen</span>
           </button>
-          <button onClick={() => { setRightSidebarView('backgrounds'); setIsGenerateSceneAIOpen(false); }} className={`flex flex-col items-center text-gray-700 hover:text-blue-600 ${rightSidebarView === 'backgrounds' ? 'text-blue-600 font-semibold' : ''}`} title="Fondos">
+          <button onClick={() => { setRightSidebarView('backgrounds'); setIsGenerateSceneAIOpen(false); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: rightSidebarView === 'backgrounds' ? '#2563eb' : '#4b5563', fontWeight: rightSidebarView === 'backgrounds' ? 'semibold' : 'normal', transition: 'color 0.2s' }} title="Fondos">
             <PaletteIcon size={24} />
-            <span className="text-xs">Fondos</span>
+            <span style={{ fontSize: '0.75rem' }}>Fondos</span>
           </button>
-          <button onClick={() => handleAddText()} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Añadir Texto">
+          <button onClick={() => handleAddText()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', transition: 'color 0.2s' }} title="Añadir Texto">
             <TextCursorInput size={24} />
-            <span className="text-xs">Texto</span>
+            <span style={{ fontSize: '0.75rem' }}>Texto</span>
           </button>
-          <button onClick={() => handleAddShape('rect')} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Añadir Forma">
+          <button onClick={() => handleAddShape('rect')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', transition: 'color 0.2s' }} title="Añadir Forma">
             <PenTool size={24} />
-            <span className="text-xs">Forma</span>
+            <span style={{ fontSize: '0.75rem' }}>Forma</span>
           </button>
           <button
             onClick={processImageWithReplicate}
-            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 ${!isProductSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', opacity: !isProductSelected ? 0.5 : 1, cursor: !isProductSelected ? 'not-allowed' : 'pointer', transition: 'color 0.2s' }}
             title="Editar Recorte (Simulado)"
             disabled={!isProductSelected}
           >
             <ImageMinus size={24} />
-            <span className="text-xs">Recorte</span>
+            <span style={{ fontSize: '0.75rem' }}>Recorte</span>
           </button>
           <button
             onClick={handleDeleteElement}
-            className={`flex flex-col items-center text-gray-700 hover:text-red-600 ${!isAnyEditableElementSelected && selectedCanvasElement !== 'background' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', opacity: (!isAnyEditableElementSelected && selectedCanvasElement !== 'background') ? 0.5 : 1, cursor: (!isAnyEditableElementSelected && selectedCanvasElement !== 'background') ? 'not-allowed' : 'pointer', transition: 'color 0.2s' }}
             title="Borrar Elemento Seleccionado"
             disabled={!isAnyEditableElementSelected && selectedCanvasElement !== 'background'}
           >
             <Trash2 size={24} />
-            <span className="text-xs">Borrar</span>
+            <span style={{ fontSize: '0.75rem' }}>Borrar</span>
           </button>
           <button
             onClick={handleDuplicateElement}
-            className={`flex flex-col items-center text-gray-700 hover:text-green-600 ${!isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', opacity: !isAnyEditableElementSelected ? 0.5 : 1, cursor: !isAnyEditableElementSelected ? 'not-allowed' : 'pointer', transition: 'color 0.2s' }}
             title="Duplicar Elemento Seleccionado"
             disabled={!isAnyEditableElementSelected}
           >
             <PlusSquare size={24} />
-            <span className="text-xs">Duplicar</span>
+            <span style={{ fontSize: '0.75rem' }}>Duplicar</span>
           </button>
-          <button onClick={() => setRightSidebarView('properties')} className={`flex flex-col items-center text-gray-700 hover:text-blue-600 ${rightSidebarView === 'properties' ? 'text-blue-600 font-semibold' : ''}`} title="Propiedades del Objeto Seleccionado">
+          <button onClick={() => setRightSidebarView('properties')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: rightSidebarView === 'properties' ? '#2563eb' : '#4b5563', fontWeight: rightSidebarView === 'properties' ? 'semibold' : 'normal', transition: 'color 0.2s' }} title="Propiedades del Objeto Seleccionado">
             <Settings size={24} />
-            <span className="text-xs">Propiedades</span>
+            <span style={{ fontSize: '0.75rem' }}>Propiedades</span>
           </button>
           <button
             onClick={() => setShowCenterGuides((prev) => !prev)}
-            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${showCenterGuides ? 'text-blue-600 font-semibold' : ''}`}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: showCenterGuides ? '#2563eb' : '#4b5563', fontWeight: showCenterGuides ? 'semibold' : 'normal', transition: 'color 0.2s' }}
             title="Alternar Guías Centrales"
           >
-            <Ruler size={24} className="group-hover:scale-110 transition-transform" />
-            <span className="text-xs">Guías</span>
+            <Ruler size={24} />
+            <span style={{ fontSize: '0.75rem' }}>Guías</span>
           </button>
-          <div className="relative">
-            <button ref={moreToolsRef} onClick={() => setShowMoreToolsDropdown(!showMoreToolsDropdown)} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Más Herramientas">
+          <div style={{ position: 'relative' }}>
+            <button ref={moreToolsRef} onClick={() => setShowMoreToolsDropdown(!showMoreToolsDropdown)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#4b5563', transition: 'color 0.2s' }} title="Más Herramientas">
               <MoreHorizontal size={24} />
-              <span className="text-xs">Más</span>
+              <span style={{ fontSize: '0.75rem' }}>Más</span>
             </button>
             {showMoreToolsDropdown && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-20 py-1 w-48 text-sm">
+              <div style={{ position: 'absolute', top: '100%', marginTop: '0.5rem', right: 0, backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '0.375rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 20, padding: '0.5rem 0', width: '12rem', fontSize: '0.875rem' }}>
                 <button
                   onClick={() => { alert('Funcionalidad "Compartir" (no implementada)'); setShowMoreToolsDropdown(false); }}
-                  className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
                 >
                   Compartir
                 </button>
-                <div className="border-t border-gray-200 my-1"></div>
+                <div style={{ borderTop: '1px solid #e5e7eb', margin: '0.25rem 0' }}></div>
                 <button
                   onClick={handleCopyStyle}
-                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${!isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: !isAnyEditableElementSelected ? 'not-allowed' : 'pointer', opacity: !isAnyEditableElementSelected ? 0.5 : 1 }}
                   disabled={!isAnyEditableElementSelected}
                 >
                   <Copy size={16} /> Copiar Estilo
                 </button>
                 <button
                   onClick={handlePasteStyle}
-                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${!copiedStyle || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: (!copiedStyle || !isAnyEditableElementSelected) ? 'not-allowed' : 'pointer', opacity: (!copiedStyle || !isAnyEditableElementSelected) ? 0.5 : 1 }}
                   disabled={!copiedStyle || !isAnyEditableElementSelected}
                 >
                   <PaintBucket size={16} /> Pegar Estilo
                 </button>
-                <div className="border-t border-gray-200 my-1"></div>
-                <span className="block px-3 py-1 text-xs text-gray-500 font-semibold uppercase">Orden de Capas</span>
+                <div style={{ borderTop: '1px solid #e5e7eb', margin: '0.25rem 0' }}></div>
+                <span style={{ display: 'block', padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', fontWeight: 'semibold', textTransform: 'uppercase' }}>Orden de Capas</span>
                 <button
                   onClick={() => handleZOrder('up')}
-                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 'not-allowed' : 'pointer', opacity: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 0.5 : 1 }}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <ChevronUp size={16} /> Adelante
                 </button>
                 <button
                   onClick={() => handleZOrder('down')}
-                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 'not-allowed' : 'pointer', opacity: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 0.5 : 1 }}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <ChevronDown size={16} /> Atrás
                 </button>
                 <button
                   onClick={() => handleZOrder('top')}
-                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 'not-allowed' : 'pointer', opacity: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 0.5 : 1 }}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <BringToFront size={16} /> Al Frente
                 </button>
                 <button
                   onClick={() => handleZOrder('bottom')}
-                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', cursor: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 'not-allowed' : 'pointer', opacity: (selectedCanvasElement === 'background' || !isAnyEditableElementSelected) ? 0.5 : 1 }}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <SendToBack size={16} /> Al Fondo
@@ -1792,17 +1792,17 @@ export default function EditorPage() {
 
         <button
           onClick={handleDownloadTemplate}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md flex items-center"
+          style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold', padding: '0.5rem 1rem', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', transition: 'background-color 0.3s' }}
           title="Descargar Imagen Final"
         >
-          <Download size={18} className="mr-2" /> Descargar
+          <Download size={18} style={{ marginRight: '0.5rem' }} /> Descargar
         </button>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Canvas Area */}
-        <div className="flex-1 flex items-center justify-center p-4 bg-gray-200">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: '#e5e7eb', overflow: 'hidden' }}>
           <DynamicCanvasEditor
             productImageUrl={productImageUrl}
             onCanvasReady={setKonvaCanvas}
@@ -1859,8 +1859,8 @@ export default function EditorPage() {
 
             imageElements={imageElements}
             selectedImageElementId={selectedImageElementId}
-            onImageUpdate={handleUpdateImageElement}
-            onImageAddedAndLoaded={handleImageAddedAndLoaded}
+            onImageUpdate={handleImageUpdate}
+            onImageAddedAndLoaded={onImageAddedAndLoaded}
 
             onTransformEndCommit={onTransformEndCommit}
             canvasSize={CANVAS_SIZE}
@@ -1874,10 +1874,10 @@ export default function EditorPage() {
         </div>
 
         {/* Right Sidebar */}
-        <div className="w-80 bg-white p-4 overflow-y-auto shadow-inner">
+        <div style={{ width: '20rem', backgroundColor: '#ffffff', padding: '1rem', overflowY: 'auto', boxShadow: 'inset 2px 0 4px rgba(0,0,0,0.05)' }}>
           {rightSidebarView === 'backgrounds' ? (
-            <div className="flex flex-col space-y-4">
-              <h2 className="text-xl font-bold text-gray-800">Opciones de Fondo</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151' }}>Opciones de Fondo</h2>
 
               <CollapsibleSection
                 title="Generar Escena con IA"
@@ -1885,17 +1885,17 @@ export default function EditorPage() {
                 setIsOpen={setIsGenerateSceneAIOpen}
                 icon={Sparkles}
               >
-                <div className="flex flex-col space-y-3">
-                  <p className="text-sm text-gray-600">Describe la escena que quieres generar para tu producto.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Describe la escena que quieres generar para tu producto.</p>
                   <textarea
                     value={scenePrompt}
                     onChange={(e) => setScenePrompt(e.target.value)}
                     placeholder="Ej: Un estudio de fotografía minimalista con luz suave"
                     rows={3}
-                    className="border border-gray-300 rounded-md p-2 w-full"
+                    style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                   />
-                  <p className="text-sm text-gray-600">Opcional: Sube una imagen de referencia para que la IA la use como contexto.</p>
-                  <label htmlFor="aiReferenceImageUpload" className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-center">
+                  <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Opcional: Sube una imagen de referencia para que la IA la use como contexto.</p>
+                  <label htmlFor="aiReferenceImageUpload" style={{ cursor: 'pointer', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', padding: '0.5rem 1rem', borderRadius: '0.375rem', textAlign: 'center', display: 'block' }}>
                     {aiReferenceImageFile ? 'Cambiar Imagen de Referencia' : 'Subir Imagen de Referencia'}
                   </label>
                   <input
@@ -1903,16 +1903,16 @@ export default function EditorPage() {
                     type="file"
                     accept="image/*"
                     onChange={handleAiReferenceImageChange}
-                    className="hidden"
+                    style={{ display: 'none' }}
                     ref={aiReferenceImageRef}
                   />
                   {aiReferenceImageUrl && (
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 mb-1">Imagen de referencia:</p>
-                      <img src={aiReferenceImageUrl} alt="AI Reference" className="max-w-full h-24 object-contain mx-auto border border-gray-200 rounded-md" />
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Imagen de referencia:</p>
+                      <img src={aiReferenceImageUrl} alt="AI Reference" style={{ maxWidth: '100%', height: '6rem', objectFit: 'contain', margin: '0 auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem' }} />
                       <button
                         onClick={() => { setAiReferenceImageFile(null); setAiReferenceImageUrl(null); if (aiReferenceImageRef.current) aiReferenceImageRef.current.value = ''; }}
-                        className="mt-2 text-red-500 hover:text-red-700 text-xs"
+                        style={{ marginTop: '0.5rem', color: '#ef4444', fontSize: '0.75rem', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
                       >
                         Eliminar Imagen de Referencia
                       </button>
@@ -1921,18 +1921,16 @@ export default function EditorPage() {
                   <button
                     onClick={handleGenerateSceneWithAI}
                     disabled={isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)}
-                    className={`flex items-center justify-center w-full py-2 px-4 rounded-md text-white font-semibold ${
-                      isGeneratingScene || (!scenePrompt && !aiReferenceImageFile) ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0.5rem 1rem', borderRadius: '0.375rem', color: '#ffffff', fontWeight: 'semibold', backgroundColor: (isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)) ? '#93c5fd' : '#3b82f6', cursor: (isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)) ? 'not-allowed' : 'pointer' }}
                   >
                     {isGeneratingScene ? (
                       <>
-                        <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-solid rounded-full border-r-transparent mr-2"></span>
+                        <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid #ffffff', borderTopColor: 'transparent', borderRadius: '50%', marginRight: '0.5rem' }}></span>
                         Generando...
                       </>
                     ) : (
                       <>
-                        <Sparkles size={18} className="mr-2" /> Generar Escena
+                        <Sparkles size={18} style={{ marginRight: '0.5rem' }} /> Generar Escena
                       </>
                     )}
                   </button>
@@ -1940,7 +1938,7 @@ export default function EditorPage() {
               </CollapsibleSection>
 
               <CollapsibleSection title="Cargar Imagen de Fondo" isOpen={isCustomBackgroundUploadOpen} setIsOpen={setIsCustomBackgroundUploadOpen} icon={ImageIcon}>
-                <label htmlFor="uploadCustomBackground" className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-center block">
+                <label htmlFor="uploadCustomBackground" style={{ cursor: 'pointer', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', padding: '0.5rem 1rem', borderRadius: '0.375rem', textAlign: 'center', display: 'block' }}>
                   Seleccionar Archivo
                 </label>
                 <input
@@ -1948,32 +1946,30 @@ export default function EditorPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleCustomBackgroundFileChange}
-                  className="hidden"
+                  style={{ display: 'none' }}
                   ref={uploadCustomBackgroundRef}
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
                   La imagen cargada se añadirá como un elemento editable en el lienzo.
                 </p>
               </CollapsibleSection>
 
               <CollapsibleSection title="Fondos Preestablecidos" isOpen={true} setIsOpen={() => {}} icon={Layout}>
-                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
                   {allPresetBackgrounds.map((bg) => (
                     <div
                       key={bg.id}
-                      className={`relative w-full h-24 rounded-md overflow-hidden cursor-pointer border ${
-                        bg.isPremium && !isUserPremium ? 'border-yellow-500 opacity-60' : 'border-gray-200 hover:border-blue-500'
-                      }`}
+                      style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', cursor: 'pointer', border: `1px solid ${bg.isPremium && !isUserPremium ? '#f59e0b' : '#e5e7eb'}`, opacity: bg.isPremium && !isUserPremium ? 0.6 : 1, transition: 'all 0.2s' }}
                       onClick={() => handleSelectPresetBackground(bg)}
                     >
-                      <img src={bg.url} alt={`Fondo ${bg.id}`} className="w-full h-full object-cover" />
+                      <img src={bg.url} alt={`Fondo ${bg.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       {bg.isPremium && (
-                        <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        <span style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
                           Premium
                         </span>
                       )}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 flex items-center justify-center transition-all">
-                        <Plus size={24} className="text-white opacity-0 hover:opacity-100" />
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
+                        <Plus size={24} style={{ color: '#ffffff', opacity: 0, transition: 'opacity 0.2s' }} />
                       </div>
                     </div>
                   ))}
@@ -1981,37 +1977,37 @@ export default function EditorPage() {
               </CollapsibleSection>
 
               <CollapsibleSection title="Administrar Fondos Personalizados (Integrar con tu API)" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
-                <p className="text-sm text-gray-600 mb-2">
+                <p style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
                   Aquí puedes subir nuevos fondos preestablecidos que se guardarán en tu propio sistema de medios (ej. `https://pixafree.online/admin/media`).
                 </p>
-                <div className="mb-3">
-                  <span className="block text-sm font-medium text-gray-700 mb-1">Tipo de Fondo:</span>
-                  <div className="flex gap-4">
-                    <label className="inline-flex items-center">
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>Tipo de Fondo:</span>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <input
                         type="radio"
-                        className="form-radio text-blue-600"
+                        style={{ formRadio: 'true', color: '#3b82f6' }}
                         name="presetType"
                         value="free"
                         checked={!newPresetIsPremium}
                         onChange={() => setNewPresetIsPremium(false)}
                       />
-                      <span className="ml-2 text-gray-700">Gratis</span>
+                      <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Gratis</span>
                     </label>
-                    <label className="inline-flex items-center">
+                    <label style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <input
                         type="radio"
-                        className="form-radio text-blue-600"
+                        style={{ formRadio: 'true', color: '#3b82f6' }}
                         name="presetType"
                         value="premium"
                         checked={newPresetIsPremium}
                         onChange={() => setNewPresetIsPremium(true)}
                       />
-                      <span className="ml-2 text-gray-700">Premium</span>
+                      <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Premium</span>
                     </label>
                   </div>
                 </div>
-                <label htmlFor="adminUploadPreset" className="cursor-pointer py-2 px-4 rounded-md text-sm font-semibold text-left hover:bg-blue-100 block bg-blue-500 text-white text-center">
+                <label htmlFor="adminUploadPreset" style={{ cursor: 'pointer', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', textAlign: 'center', display: 'block', backgroundColor: isUploadingAdminPreset ? '#93c5fd' : '#3b82f6', color: '#ffffff' }}>
                   {isUploadingAdminPreset ? 'Subiendo...' : 'Subir Nuevo Fondo'}
                 </label>
                 <input
@@ -2019,34 +2015,33 @@ export default function EditorPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleAdminUploadPreset}
-                  className="hidden"
+                  style={{ display: 'none' }}
                   ref={adminUploadPresetRef}
                   disabled={isUploadingAdminPreset}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
                   **Nota:** La subida es solo para demostración en esta sesión. Para persistencia, debes integrar con tu API.
                 </p>
 
-                <h4 className="text-md font-semibold text-gray-700 mt-4 mb-2">Fondos Subidos (Solo en esta sesión)</h4>
+                <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem', marginBottom: '0.5rem' }}>Fondos Subidos (Solo en esta sesión)</h4>
                 {adminUploadedBackgrounds.length === 0 ? (
-                  <p className="text-sm text-gray-500">No has subido ningún fondo en esta sesión.</p>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>No has subido ningún fondo en esta sesión.</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
                     {adminUploadedBackgrounds.map((preset) => (
                       <div
                         key={preset.id}
-                        className="relative w-full h-24 rounded-md overflow-hidden group border border-gray-200"
+                        style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}
                       >
-                        <img src={preset.url} alt={`Admin Uploaded ${preset.id}`} className="w-full h-full object-cover" />
+                        <img src={preset.url} alt={`Admin Uploaded ${preset.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         {preset.isPremium && (
-                          <span className="absolute top-1 left-1 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                          <span style={{ position: 'absolute', top: '0.25rem', left: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
                             Premium
                           </span>
                         )}
                         <button
                           onClick={() => handleDeleteAdminPreset(preset.id)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Eliminar este fondo (solo de esta sesión)"
+                          style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '9999px', padding: '0.25rem', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s' }}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -2054,7 +2049,7 @@ export default function EditorPage() {
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-gray-500 mt-2">
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
                   **Implementación:** Para que los fondos subidos persistan y estén disponibles para todos los usuarios, deberás:
                   <br/>1. Llamar a tu API de backend (`https://pixafree.online/admin/media` o similar) en `handleAdminUploadPreset` para subir el archivo, incluyendo el estado `isPremium`.
                   <br/>2. Llamar a tu API en `handleDeleteAdminPreset` para eliminar el archivo.
@@ -2063,25 +2058,26 @@ export default function EditorPage() {
               </CollapsibleSection>
             </div>
           ) : (
-            <div className="flex flex-col space-y-4">
-              <h2 className="text-xl font-bold text-gray-800">Propiedades del Objeto</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151' }}>Propiedades del Objeto</h2>
 
-              <div className="flex items-center justify-between p-2 bg-yellow-100 rounded-md border border-yellow-200">
-                <span className="text-sm font-semibold text-yellow-800">Simular Usuario Premium:</span>
-                <label className="relative inline-flex items-center cursor-pointer">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#fffbeb', borderRadius: '0.375rem', border: '1px solid #fcd34d' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 'semibold', color: '#b45309' }}>Simular Usuario Premium:</span>
+                <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     value=""
-                    className="sr-only peer"
+                    style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
                     checked={isUserPremium}
                     onChange={(e) => setIsUserPremium(e.target.checked)}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                  <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
+                  <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
                 </label>
               </div>
 
               {!selectedCanvasElement && (
-                <div className="p-4 text-center text-gray-500 border border-gray-300 rounded-md">
+                <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}>
                   Haz clic en un elemento en el lienzo para editar sus propiedades.
                 </div>
               )}
@@ -2089,7 +2085,7 @@ export default function EditorPage() {
               {isProductSelected && (
                 <CollapsibleSection title="Propiedades del Producto" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
                   <div>
-                    <label htmlFor="productOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(productOpacity * 100).toFixed(0)}%</label>
+                    <label htmlFor="productOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(productOpacity * 100).toFixed(0)}%</label>
                     <input
                       id="productOpacity"
                       type="range"
@@ -2098,7 +2094,7 @@ export default function EditorPage() {
                       step="0.01"
                       value={productOpacity}
                       onChange={(e) => { setProductOpacity(Number(e.target.value)); onTransformEndCommit(); }}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                     />
                   </div>
                 </CollapsibleSection>
@@ -2107,7 +2103,7 @@ export default function EditorPage() {
               {selectedCanvasElement === 'background' && (
                 <CollapsibleSection title="Propiedades del Fondo" isOpen={true} setIsOpen={() => {}} icon={Layout}>
                   <div>
-                    <label htmlFor="backgroundOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(backgroundOpacity * 100).toFixed(0)}%</label>
+                    <label htmlFor="backgroundOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(backgroundOpacity * 100).toFixed(0)}%</label>
                     <input
                       id="backgroundOpacity"
                       type="range"
@@ -2116,7 +2112,7 @@ export default function EditorPage() {
                       step="0.01"
                       value={backgroundOpacity}
                       onChange={(e) => { setBackgroundOpacity(Number(e.target.value)); onTransformEndCommit(); }}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                     />
                   </div>
                 </CollapsibleSection>
@@ -2124,20 +2120,20 @@ export default function EditorPage() {
 
               {isTextSelected && currentTextElement && (
                 <CollapsibleSection title="Propiedades del Texto" isOpen={true} setIsOpen={() => {}} icon={TextCursorInput}>
-                  <div className="space-y-3">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
-                      <label htmlFor="textContent" className="block text-sm font-medium text-gray-700">Contenido del Texto</label>
+                      <label htmlFor="textContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido del Texto</label>
                       <textarea
                         id="textContent"
                         value={currentTextElement.text}
                         onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { text: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                         rows={3}
                       />
                     </div>
                     <div>
-                      <label htmlFor="fontSize" className="block text-sm font-medium text-gray-700">Tamaño de Fuente: {currentTextElement.fontSize.toFixed(0)}</label>
+                      <label htmlFor="fontSize" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Tamaño de Fuente: {currentTextElement.fontSize.toFixed(0)}</label>
                       <input
                         id="fontSize"
                         type="range"
@@ -2147,28 +2143,28 @@ export default function EditorPage() {
                         onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontSize: Number(e.target.value) })}
                         onMouseUp={onTransformEndCommit}
                         onTouchEnd={onTransformEndCommit}
-                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="textColor" className="block text-sm font-medium text-gray-700">Color de Texto</label>
+                      <label htmlFor="textColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Texto</label>
                       <input
                         id="textColor"
                         type="color"
                         value={currentTextElement.fill}
                         onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fill: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="w-full h-10 rounded-lg cursor-pointer"
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="fontFamily" className="block text-sm font-medium text-gray-700">Familia de Fuente</label>
+                      <label htmlFor="fontFamily" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Familia de Fuente</label>
                       <select
                         id="fontFamily"
                         value={currentTextElement.fontFamily}
                         onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontFamily: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                       >
                         <option value="Arial">Arial</option>
                         <option value="Verdana">Verdana</option>
@@ -2186,70 +2182,70 @@ export default function EditorPage() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="textAlign" className="block text-sm font-medium text-gray-700">Alineación de Texto</label>
-                      <div className="flex space-x-2 mt-1">
+                      <label htmlFor="textAlign" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Alineación de Texto</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'left' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'left' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'left' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'left' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           Izquierda
                         </button>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'center' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'center' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'center' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'center' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           Centro
                         </button>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'right' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'right' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'right' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           Derecha
                         </button>
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="textDecoration" className="block text-sm font-medium text-gray-700">Estilo de Texto</label>
-                      <div className="flex space-x-2 mt-1">
+                      <label htmlFor="textDecoration" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Estilo de Texto</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'bold' ? 'none' : 'bold' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm font-bold ${currentTextElement.textDecoration === 'bold' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'bold', backgroundColor: currentTextElement.textDecoration === 'bold' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'bold' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           B
                         </button>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { fontStyle: currentTextElement.fontStyle === 'italic' ? 'normal' : 'italic' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm italic ${currentTextElement.fontStyle === 'italic' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontStyle: 'italic', backgroundColor: currentTextElement.fontStyle === 'italic' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.fontStyle === 'italic' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           I
                         </button>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'underline' ? 'none' : 'underline' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm underline ${currentTextElement.textDecoration === 'underline' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', textDecoration: 'underline', backgroundColor: currentTextElement.textDecoration === 'underline' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'underline' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           U
                         </button>
                         <button
                           onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'line-through' ? 'none' : 'line-through' }); onTransformEndCommit(); }}
-                          className={`px-3 py-1 rounded-md text-sm line-through ${currentTextElement.textDecoration === 'line-through' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', textDecoration: 'line-through', backgroundColor: currentTextElement.textDecoration === 'line-through' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'line-through' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                         >
                           S
                         </button>
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="textStrokeColor" className="block text-sm font-medium text-gray-700">Color de Contorno</label>
+                      <label htmlFor="textStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Contorno</label>
                       <input
                         id="textStrokeColor"
                         type="color"
                         value={currentTextElement.stroke || '#000000'}
                         onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { stroke: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="w-full h-10 rounded-lg cursor-pointer"
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="textStrokeWidth" className="block text-sm font-medium text-gray-700">Grosor de Contorno: {currentTextElement.strokeWidth?.toFixed(0) || 0}</label>
+                      <label htmlFor="textStrokeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Grosor de Contorno: {currentTextElement.strokeWidth?.toFixed(0) || 0}</label>
                       <input
                         id="textStrokeWidth"
                         type="range"
@@ -2260,7 +2256,7 @@ export default function EditorPage() {
                         onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { strokeWidth: Number(e.target.value) })}
                         onMouseUp={onTransformEndCommit}
                         onTouchEnd={onTransformEndCommit}
-                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                       />
                     </div>
                   </div>
@@ -2269,11 +2265,11 @@ export default function EditorPage() {
 
               {isShapeSelected && currentShapeElement && (
                 <CollapsibleSection title="Propiedades de la Figura" isOpen={true} setIsOpen={() => {}} icon={PenTool}>
-                  <div className="space-y-3">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {currentShapeElement.type === 'rect' && (
                       <>
                         <div>
-                          <label htmlFor="shapeWidth" className="block text-sm font-medium text-gray-700">Ancho: {currentShapeElement.width?.toFixed(0)}</label>
+                          <label htmlFor="shapeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Ancho: {currentShapeElement.width?.toFixed(0)}</label>
                           <input
                             id="shapeWidth"
                             type="range"
@@ -2283,11 +2279,11 @@ export default function EditorPage() {
                             onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { width: Number(e.target.value) })}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                         <div>
-                          <label htmlFor="shapeHeight" className="block text-sm font-medium text-gray-700">Alto: {currentShapeElement.height?.toFixed(0)}</label>
+                          <label htmlFor="shapeHeight" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Alto: {currentShapeElement.height?.toFixed(0)}</label>
                           <input
                             id="shapeHeight"
                             type="range"
@@ -2297,14 +2293,14 @@ export default function EditorPage() {
                             onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { height: Number(e.target.value) })}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                       </>
                     )}
                     {currentShapeElement.type === 'circle' && (
                       <div>
-                        <label htmlFor="shapeRadius" className="block text-sm font-medium text-gray-700">Radio: {currentShapeElement.radius?.toFixed(0)}</label>
+                        <label htmlFor="shapeRadius" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Radio: {currentShapeElement.radius?.toFixed(0)}</label>
                         <input
                           id="shapeRadius"
                           type="range"
@@ -2314,36 +2310,36 @@ export default function EditorPage() {
                           onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { radius: Number(e.target.value) })}
                           onMouseUp={onTransformEndCommit}
                           onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                         />
                       </div>
                     )}
                     {currentShapeElement.type !== 'line' && (
                       <div>
-                        <label htmlFor="shapeFillColor" className="block text-sm font-medium text-gray-700">Color de Relleno</label>
+                        <label htmlFor="shapeFillColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Relleno</label>
                         <input
                           id="shapeFillColor"
                           type="color"
                           value={currentShapeElement.fill}
                           onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { fill: e.target.value })}
                           onBlur={onTransformEndCommit}
-                          className="w-full h-10 rounded-lg cursor-pointer"
+                          style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
                         />
                       </div>
                     )}
                     <div>
-                      <label htmlFor="shapeStrokeColor" className="block text-sm font-medium text-gray-700">Color de Borde</label>
+                      <label htmlFor="shapeStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Borde</label>
                       <input
                         id="shapeStrokeColor"
                         type="color"
                         value={currentShapeElement.stroke}
                         onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { stroke: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="w-full h-10 rounded-lg cursor-pointer"
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="shapeStrokeWidth" className="block text-sm font-medium text-gray-700">Grosor de Borde: {currentShapeElement.strokeWidth.toFixed(0)}</label>
+                      <label htmlFor="shapeStrokeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Grosor de Borde: {currentShapeElement.strokeWidth.toFixed(0)}</label>
                       <input
                         id="shapeStrokeWidth"
                         type="range"
@@ -2353,7 +2349,7 @@ export default function EditorPage() {
                         onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { strokeWidth: Number(e.target.value) })}
                         onMouseUp={onTransformEndCommit}
                         onTouchEnd={onTransformEndCommit}
-                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                       />
                     </div>
                   </div>
@@ -2362,20 +2358,20 @@ export default function EditorPage() {
 
               {isDateSelected && currentDateElement && (
                 <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={() => {}} icon={Layout}>
-                  <div className="space-y-3">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
-                      <label htmlFor="dateContent" className="block text-sm font-medium text-gray-700">Contenido de la Fecha</label>
+                      <label htmlFor="dateContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido de la Fecha</label>
                       <input
                         id="dateContent"
                         type="text"
                         value={currentDateElement.text}
                         onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="dateFormat" className="block text-sm font-medium text-gray-700">Formato de Fecha</label>
+                      <label htmlFor="dateFormat" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Formato de Fecha</label>
                       <select
                         id="dateFormat"
                         value={currentDateElement.format}
@@ -2385,7 +2381,7 @@ export default function EditorPage() {
                           handleUpdateDateElement({ format: newFormat, text: formatDate(today, newFormat) });
                         }}
                         onBlur={onTransformEndCommit}
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                       >
                         <option value="DD/MM/YYYY">DD/MM/YYYY (ej. 12/07/2025)</option>
                         <option value="MMMM DD, YYYY">MMMM DD, YYYY (ej. Julio 12, 2025)</option>
@@ -2394,7 +2390,7 @@ export default function EditorPage() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="dateFontSize" className="block text-sm font-medium text-gray-700">Tamaño de Fuente: {currentDateElement.fontSize.toFixed(0)}</label>
+                      <label htmlFor="dateFontSize" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Tamaño de Fuente: {currentDateElement.fontSize.toFixed(0)}</label>
                       <input
                         id="dateFontSize"
                         type="range"
@@ -2404,28 +2400,28 @@ export default function EditorPage() {
                         onChange={(e) => handleUpdateDateElement({ fontSize: Number(e.target.value) })}
                         onMouseUp={onTransformEndCommit}
                         onTouchEnd={onTransformEndCommit}
-                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="dateTextColor" className="block text-sm font-medium text-gray-700">Color de Texto</label>
+                      <label htmlFor="dateTextColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Texto</label>
                       <input
                         id="dateTextColor"
                         type="color"
                         value={currentDateElement.fill}
                         onChange={(e) => handleUpdateDateElement({ fill: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="w-full h-10 rounded-lg cursor-pointer"
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
                       />
                     </div>
                     <div>
-                      <label htmlFor="dateFontFamily" className="block text-sm font-medium text-gray-700">Familia de Fuente</label>
+                      <label htmlFor="dateFontFamily" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Familia de Fuente</label>
                       <select
                         id="dateFontFamily"
                         value={currentDateElement.fontFamily}
                         onChange={(e) => handleUpdateDateElement({ fontFamily: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                       >
                         <option value="Arial">Arial</option>
                         <option value="Verdana">Verdana</option>
@@ -2448,7 +2444,7 @@ export default function EditorPage() {
               {isImageSelected && currentImageElement && (
                 <CollapsibleSection title="Propiedades de la Imagen" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
                   <div>
-                    <label htmlFor="imageOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(currentImageElement.opacity * 100).toFixed(0)}%</label>
+                    <label htmlFor="imageOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(currentImageElement.opacity * 100).toFixed(0)}%</label>
                     <input
                       id="imageOpacity"
                       type="range"
@@ -2459,7 +2455,7 @@ export default function EditorPage() {
                       onChange={(e) => handleUpdateImageElement(selectedImageElementId!, { opacity: Number(e.target.value) })}
                       onMouseUp={onTransformEndCommit}
                       onTouchEnd={onTransformEndCommit}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                     />
                   </div>
                 </CollapsibleSection>
@@ -2467,9 +2463,9 @@ export default function EditorPage() {
 
               {isAnyEditableElementSelected && (
                 <CollapsibleSection title="Ajustes Generales" isOpen={true} setIsOpen={() => {}} icon={Settings}>
-                  <div className="space-y-3">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
-                      <label htmlFor="blurRadius" className="block text-sm font-medium text-gray-700">Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
+                      <label htmlFor="blurRadius" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
                       <input
                         id="blurRadius"
                         type="range"
@@ -2479,38 +2475,39 @@ export default function EditorPage() {
                         onChange={(e) => { currentElementProps.setBlurRadius(Number(e.target.value)); onTransformEndCommit(); }}
                         onMouseUp={onTransformEndCommit}
                         onTouchEnd={onTransformEndCommit}
-                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Sombra</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Sombra</span>
+                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           value=""
-                          className="sr-only peer"
+                          style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
                           checked={currentElementProps.shadowEnabled}
                           onChange={handleToggleShadow}
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
+                        <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
                       </label>
                     </div>
                     {currentElementProps.shadowEnabled && (
-                      <div className="flex flex-col space-y-2 p-2 bg-gray-100 rounded-md border border-gray-200">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.375rem', border: '1px solid #e5e7eb', marginTop: '0.5rem' }}>
                         <div>
-                          <label htmlFor="shadowColor" className="block text-sm font-medium text-gray-700">Color de Sombra</label>
+                          <label htmlFor="shadowColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Sombra</label>
                           <input
                             id="shadowColor"
                             type="color"
                             value={currentElementProps.shadowColor}
                             onChange={(e) => { currentElementProps.setShadowColor(e.target.value); onTransformEndCommit(); }}
                             onBlur={onTransformEndCommit}
-                            className="w-full h-10 rounded-lg cursor-pointer"
+                            style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
                           />
                         </div>
                         <div>
-                          <label htmlFor="shadowBlur" className="block text-sm font-medium text-gray-700">Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
+                          <label htmlFor="shadowBlur" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
                           <input
                             id="shadowBlur"
                             type="range"
@@ -2519,12 +2516,12 @@ export default function EditorPage() {
                             value={currentElementProps.shadowBlur}
                             onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
                             onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                            onTouchEnd={onTransformEndEnd}
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                         <div>
-                          <label htmlFor="shadowOffsetX" className="block text-sm font-medium text-gray-700">Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
+                          <label htmlFor="shadowOffsetX" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
                           <input
                             id="shadowOffsetX"
                             type="range"
@@ -2534,11 +2531,11 @@ export default function EditorPage() {
                             onChange={(e) => { currentElementProps.setShadowOffsetX(Number(e.target.value)); onTransformEndCommit(); }}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                         <div>
-                          <label htmlFor="shadowOffsetY" className="block text-sm font-medium text-gray-700">Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
+                          <label htmlFor="shadowOffsetY" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
                           <input
                             id="shadowOffsetY"
                             type="range"
@@ -2548,11 +2545,11 @@ export default function EditorPage() {
                             onChange={(e) => { currentElementProps.setShadowOffsetY(Number(e.target.value)); onTransformEndCommit(); }}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                         <div>
-                          <label htmlFor="shadowOpacity" className="block text-sm font-medium text-gray-700">Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
+                          <label htmlFor="shadowOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
                           <input
                             id="shadowOpacity"
                             type="range"
@@ -2563,59 +2560,60 @@ export default function EditorPage() {
                             onChange={(e) => { currentElementProps.setShadowOpacity(Number(e.target.value)); onTransformEndCommit(); }}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
-                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Reflejo</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Reflejo</span>
+                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           value=""
-                          className="sr-only peer"
+                          style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
                           checked={currentElementProps.reflectionEnabled}
                           onChange={handleToggleReflection}
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
+                        <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
                       </label>
                     </div>
 
-                    <h4 className="text-md font-semibold text-gray-700 mt-4">Voltear</h4>
-                    <div className="flex space-x-2">
+                    <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem' }}>Voltear</h4>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => handleFlip('x')}
-                        className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300"
+                        style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', cursor: 'pointer' }}
                       >
                         Voltear Horizontal
                       </button>
                       <button
                         onClick={() => handleFlip('y')}
-                        className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300"
+                        style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', cursor: 'pointer' }}
                       >
                         Voltear Vertical
                       </button>
                     </div>
 
-                    <h4 className="text-md font-semibold text-gray-700 mt-4">Filtros</h4>
-                    <div className="grid grid-cols-2 gap-2">
+                    <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem' }}>Filtros</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
                       <button
                         onClick={() => handleApplyFilter('none')}
-                        className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'none' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'none' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'none' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                       >
                         Ninguno
                       </button>
                       <button
                         onClick={() => handleApplyFilter('grayscale')}
-                        className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'grayscale' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'grayscale' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'grayscale' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                       >
                         Escala de Grises
                       </button>
                       <button
                         onClick={() => handleApplyFilter('sepia')}
-                        className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'sepia' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'sepia' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'sepia' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
                       >
                         Sepia
                       </button>
@@ -2629,25 +2627,25 @@ export default function EditorPage() {
       </div>
 
       {showImageUploadTypeModal && tempUploadedFile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
-            <h3 className="text-lg font-bold mb-4">¿Cómo quieres usar esta imagen?</h3>
-            <div className="flex flex-col space-y-3">
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', maxWidth: '24rem', width: '100%', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>¿Cómo quieres usar esta imagen?</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button
                 onClick={() => handleSetAsProduct(tempUploadedFile)}
-                className="bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700"
+                style={{ backgroundColor: '#3b82f6', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
               >
                 Establecer como Imagen de Producto
               </button>
               <button
                 onClick={() => handleAddImageAsElement(tempUploadedFile)}
-                className="bg-green-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-700"
+                style={{ backgroundColor: '#22c55e', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
               >
                 Añadir como Elemento en el Lienzo
               </button>
               <button
                 onClick={() => { setShowImageUploadTypeModal(false); setTempUploadedFile(null); }}
-                className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md font-semibold hover:bg-gray-300"
+                style={{ backgroundColor: '#e5e7eb', color: '#4b5563', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
               >
                 Cancelar
               </button>
