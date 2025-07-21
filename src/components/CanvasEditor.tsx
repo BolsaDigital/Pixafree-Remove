@@ -7,6 +7,14 @@ import { KonvaEventObject } from 'konva/lib/Node';
 // Import the CanvasImageElement component
 import CanvasImageElement from './CanvasImageElement';
 
+// --- INICIO DE LA CORRECCIÓN: Declaración global para Konva ---
+declare global {
+  interface Window {
+    Konva: any; // Puedes refinar 'any' si conoces la estructura exacta de Konva.Filters
+  }
+}
+// --- FIN DE LA CORRECCIÓN ---
+
 interface TextElement {
   id: string;
   text: string;
