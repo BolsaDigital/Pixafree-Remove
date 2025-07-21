@@ -1539,7 +1539,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { offsetY: val }), // Corrected here
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateImageElement(selectedImageElementId!, { filter: val }),
@@ -1986,7 +1986,8 @@ export default function EditorPage() {
                     <label style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <input
                         type="radio"
-                        style={{ formRadio: 'true', color: '#3b82f6' }}
+                        // Removed formRadio: 'true' as it's not a valid inline style property
+                        style={{ color: '#3b82f6' }}
                         name="presetType"
                         value="free"
                         checked={!newPresetIsPremium}
@@ -1997,7 +1998,8 @@ export default function EditorPage() {
                     <label style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <input
                         type="radio"
-                        style={{ formRadio: 'true', color: '#3b82f6' }}
+                        // Removed formRadio: 'true' as it's not a valid inline style property
+                        style={{ color: '#3b82f6' }}
                         name="presetType"
                         value="premium"
                         checked={newPresetIsPremium}
