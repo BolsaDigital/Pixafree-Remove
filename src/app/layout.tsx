@@ -1,4 +1,8 @@
-import '@/assets/styles/globals.css';
+// src/app/layout.tsx
+
+// Cambia la ruta de importación para que apunte a la nueva ubicación de globals.css
+import '@/app/globals.css'; // <--- ¡CAMBIO AQUÍ!
+
 import { fontGeist } from '@/config/fonts';
 import settingServices from '@/server/settings/setting-services';
 import { Metadata } from 'next';
