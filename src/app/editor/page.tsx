@@ -5,15 +5,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
-  Download, Image as ImageIcon, Layout, Sparkles, Plus, TextCursorInput, PenTool, ImageMinus,
-  Trash2, Undo2, Redo2, Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown,
-  PlusSquare, Settings, MoreHorizontal, Ruler, Palette as PaletteIcon, ChevronRight
+  Download, Type, Image as ImageIcon, Layout, Circle, Square, Calendar, Trash2, Undo2, Redo2, Sparkles, Plus, Palette, TextCursorInput, PenTool, CreditCard, DollarSign,
+  Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown, PlusSquare, RotateCcw, RotateCw, ImageMinus,
+  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler
 } from 'lucide-react';
 
 // Firebase imports (kept for general app functionality like history, authentication)
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, signInAnonymously, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, signInAnonymously, signInWithCustomToken, Auth } from 'firebase/auth';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, Firestore } from 'firebase/firestore';
 
 const DynamicCanvasEditor = dynamic(
   () => import('@/components/CanvasEditor'),
@@ -119,8 +119,8 @@ interface ImageElement {
   flipX: number;
   flipY: number;
   filter: 'none' | 'grayscale' | 'sepia';
-  width?: number;
-  height?: number;
+  width?: number; // Added to interface
+  height?: number; // Added to interface
 }
 
 interface CanvasState {
@@ -180,34 +180,32 @@ interface DisplayBackground {
 
 const CANVAS_SIZE = 700;
 
-// Temporalmente eliminamos CollapsibleSection de este archivo para simplificar el JSX principal
-// y evitar posibles conflictos. Si esto compila, lo reintroduciremos como un componente separado.
-// interface CollapsibleSectionProps {
-//   title: string;
-//   isOpen: boolean;
-//   setIsOpen: (isOpen: boolean) => void;
-//   children: React.ReactNode;
-//   className?: string;
-//   icon?: React.ElementType;
-// }
+interface CollapsibleSectionProps {
+  title: string;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  children: React.ReactNode;
+  className?: string;
+  icon?: React.ElementType;
+}
 
-// const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, isOpen, setIsOpen, children, className, icon: Icon }) => {
-//   return (
-//     <div className={`border border-gray-300 rounded-md mb-2 ${className}`}>
-//       <button
-//         className="w-full flex items-center justify-between p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
-//         onClick={() => setIsOpen(!isOpen)}
-//       >
-//         <div className="flex items-center gap-2">
-//           {Icon && <Icon size={16} />}
-//           {title}
-//         </div>
-//         <ChevronRight size={16} className={`transform transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-//       </button>
-//       {isOpen && <div className="p-3 border-t border-gray-300">{children}</div>}
-//     </div>
-//   );
-// };
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, isOpen, setIsOpen, children, className, icon: Icon }) => {
+  return (
+    <div className={`border border-gray-300 rounded-md mb-2 ${className}`}>
+      <button
+        className="w-full flex items-center justify-between p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={16} />}
+          {title}
+        </div>
+        <ChevronRight size={16} className={`transform transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+      {isOpen && <div className="p-3 border-t border-gray-300">{children}</div>}
+    </div>
+  );
+};
 
 export default function EditorPage() {
   const searchParams = useSearchParams();
@@ -1881,237 +1879,183 @@ export default function EditorPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151' }}>Opciones de Fondo</h2>
 
-              {/* Sección Generar Escena con IA */}
-              <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                <button
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                  onClick={() => setIsGenerateSceneAIOpen(!isGenerateSceneAIOpen)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Sparkles size={16} />
-                    Generar Escena con IA
-                  </div>
-                  <ChevronRight size={16} style={{ transform: isGenerateSceneAIOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                </button>
-                {isGenerateSceneAIOpen && (
-                  <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Describe la escena que quieres generar para tu producto.</p>
-                      <textarea
-                        value={scenePrompt}
-                        onChange={(e) => setScenePrompt(e.target.value)}
-                        placeholder="Ej: Un estudio de fotografía minimalista con luz suave"
-                        rows={3}
-                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
-                      />
-                      <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Opcional: Sube una imagen de referencia para que la IA la use como contexto.</p>
-                      <label htmlFor="aiReferenceImageUpload" style={{ cursor: 'pointer', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', padding: '0.5rem 1rem', borderRadius: '0.375rem', textAlign: 'center', display: 'block' }}>
-                        {aiReferenceImageFile ? 'Cambiar Imagen de Referencia' : 'Subir Imagen de Referencia'}
-                      </label>
-                      <input
-                        id="aiReferenceImageUpload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAiReferenceImageChange}
-                        style={{ display: 'none' }}
-                        ref={aiReferenceImageRef}
-                      />
-                      {aiReferenceImageUrl && (
-                        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Imagen de referencia:</p>
-                          <img src={aiReferenceImageUrl} alt="AI Reference" style={{ maxWidth: '100%', height: '6rem', objectFit: 'contain', margin: '0 auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem' }} />
-                          <button
-                            onClick={() => { setAiReferenceImageFile(null); setAiReferenceImageUrl(null); if (aiReferenceImageRef.current) aiReferenceImageRef.current.value = ''; }}
-                            style={{ marginTop: '0.5rem', color: '#ef4444', fontSize: '0.75rem', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
-                          >
-                            Eliminar Imagen de Referencia
-                          </button>
-                        </div>
-                      )}
+              <CollapsibleSection
+                title="Generar Escena con IA"
+                isOpen={isGenerateSceneAIOpen}
+                setIsOpen={setIsGenerateSceneAIOpen}
+                icon={Sparkles}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Describe la escena que quieres generar para tu producto.</p>
+                  <textarea
+                    value={scenePrompt}
+                    onChange={(e) => setScenePrompt(e.target.value)}
+                    placeholder="Ej: Un estudio de fotografía minimalista con luz suave"
+                    rows={3}
+                    style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                  />
+                  <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Opcional: Sube una imagen de referencia para que la IA la use como contexto.</p>
+                  <label htmlFor="aiReferenceImageUpload" style={{ cursor: 'pointer', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', padding: '0.5rem 1rem', borderRadius: '0.375rem', textAlign: 'center', display: 'block' }}>
+                    {aiReferenceImageFile ? 'Cambiar Imagen de Referencia' : 'Subir Imagen de Referencia'}
+                  </label>
+                  <input
+                    id="aiReferenceImageUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAiReferenceImageChange}
+                    style={{ display: 'none' }}
+                    ref={aiReferenceImageRef}
+                  />
+                  {aiReferenceImageUrl && (
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Imagen de referencia:</p>
+                      <img src={aiReferenceImageUrl} alt="AI Reference" style={{ maxWidth: '100%', height: '6rem', objectFit: 'contain', margin: '0 auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem' }} />
                       <button
-                        onClick={handleGenerateSceneWithAI}
-                        disabled={isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0.5rem 1rem', borderRadius: '0.375rem', color: '#ffffff', fontWeight: 'semibold', backgroundColor: (isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)) ? '#93c5fd' : '#3b82f6', cursor: (isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)) ? 'not-allowed' : 'pointer' }}
+                        onClick={() => { setAiReferenceImageFile(null); setAiReferenceImageUrl(null); if (aiReferenceImageRef.current) aiReferenceImageRef.current.value = ''; }}
+                        style={{ marginTop: '0.5rem', color: '#ef4444', fontSize: '0.75rem', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
                       >
-                        {isGeneratingScene ? (
-                          <>
-                            <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid #ffffff', borderTopColor: 'transparent', borderRadius: '50%', marginRight: '0.5rem' }}></span>
-                            Generando...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles size={18} style={{ marginRight: '0.5rem' }} /> Generar Escena
-                          </>
-                        )}
+                        Eliminar Imagen de Referencia
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                  <button
+                    onClick={handleGenerateSceneWithAI}
+                    disabled={isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0.5rem 1rem', borderRadius: '0.375rem', color: '#ffffff', fontWeight: 'semibold', backgroundColor: (isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)) ? '#93c5fd' : '#3b82f6', cursor: (isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)) ? 'not-allowed' : 'pointer' }}
+                  >
+                    {isGeneratingScene ? (
+                      <>
+                        <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid #ffffff', borderTopColor: 'transparent', borderRadius: '50%', marginRight: '0.5rem' }}></span>
+                        Generando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={18} style={{ marginRight: '0.5rem' }} /> Generar Escena
+                      </>
+                    )}
+                  </button>
+                </div>
+              </CollapsibleSection>
 
-              {/* Sección Cargar Imagen de Fondo */}
-              <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                <button
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                  onClick={() => setIsCustomBackgroundUploadOpen(!isCustomBackgroundUploadOpen)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ImageIcon size={16} />
-                    Cargar Imagen de Fondo
-                  </div>
-                  <ChevronRight size={16} style={{ transform: isCustomBackgroundUploadOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                </button>
-                {isCustomBackgroundUploadOpen && (
-                  <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                    <label htmlFor="uploadCustomBackground" style={{ cursor: 'pointer', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', padding: '0.5rem 1rem', borderRadius: '0.375rem', textAlign: 'center', display: 'block' }}>
-                      Seleccionar Archivo
+              <CollapsibleSection title="Cargar Imagen de Fondo" isOpen={isCustomBackgroundUploadOpen} setIsOpen={setIsCustomBackgroundUploadOpen} icon={ImageIcon}>
+                <label htmlFor="uploadCustomBackground" style={{ cursor: 'pointer', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', padding: '0.5rem 1rem', borderRadius: '0.375rem', textAlign: 'center', display: 'block' }}>
+                  Seleccionar Archivo
+                </label>
+                <input
+                  id="uploadCustomBackground"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCustomBackgroundFileChange}
+                  style={{ display: 'none' }}
+                  ref={uploadCustomBackgroundRef}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                  La imagen cargada se añadirá como un elemento editable en el lienzo.
+                </p>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Fondos Preestablecidos" isOpen={true} setIsOpen={() => {}} icon={Layout}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                  {allPresetBackgrounds.map((bg) => (
+                    <div
+                      key={bg.id}
+                      style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', cursor: 'pointer', border: `1px solid ${bg.isPremium && !isUserPremium ? '#f59e0b' : '#e5e7eb'}`, opacity: bg.isPremium && !isUserPremium ? 0.6 : 1, transition: 'all 0.2s' }}
+                      onClick={() => handleSelectPresetBackground(bg)}
+                    >
+                      <img src={bg.url} alt={`Fondo ${bg.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {bg.isPremium && (
+                        <span style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
+                          Premium
+                        </span>
+                      )}
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
+                        <Plus size={24} style={{ color: '#ffffff', opacity: 0, transition: 'opacity 0.2s' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Administrar Fondos Personalizados (Integrar con tu API)" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
+                <p style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                  Aquí puedes subir nuevos fondos preestablecidos que se guardarán en tu propio sistema de medios (ej. `https://pixafree.online/admin/media`).
+                </p>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>Tipo de Fondo:</span>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        style={{ formRadio: 'true', color: '#3b82f6' }}
+                        name="presetType"
+                        value="free"
+                        checked={!newPresetIsPremium}
+                        onChange={() => setNewPresetIsPremium(false)}
+                      />
+                      <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Gratis</span>
                     </label>
-                    <input
-                      id="uploadCustomBackground"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleCustomBackgroundFileChange}
-                      style={{ display: 'none' }}
-                      ref={uploadCustomBackgroundRef}
-                    />
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                      La imagen cargada se añadirá como un elemento editable en el lienzo.
-                    </p>
+                    <label style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        style={{ formRadio: 'true', color: '#3b82f6' }}
+                        name="presetType"
+                        value="premium"
+                        checked={newPresetIsPremium}
+                        onChange={() => setNewPresetIsPremium(true)}
+                      />
+                      <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Premium</span>
+                    </label>
                   </div>
-                )}
-              </div>
+                </div>
+                <label htmlFor="adminUploadPreset" style={{ cursor: 'pointer', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', textAlign: 'center', display: 'block', backgroundColor: isUploadingAdminPreset ? '#93c5fd' : '#3b82f6', color: '#ffffff' }}>
+                  {isUploadingAdminPreset ? 'Subiendo...' : 'Subir Nuevo Fondo'}
+                </label>
+                <input
+                  id="adminUploadPreset"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAdminUploadPreset}
+                  style={{ display: 'none' }}
+                  ref={adminUploadPresetRef}
+                  disabled={isUploadingAdminPreset}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  **Nota:** La subida es solo para demostración en esta sesión. Para persistencia, debes integrar con tu API.
+                </p>
 
-              {/* Sección Fondos Preestablecidos */}
-              <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                <button
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                  onClick={() => { /* No-op for always open */ }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Layout size={16} />
-                    Fondos Preestablecidos
-                  </div>
-                  {/* <ChevronRight size={16} /> */} {/* Opcional: remover el ícono si siempre está abierto */}
-                </button>
-                <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem', marginBottom: '0.5rem' }}>Fondos Subidos (Solo en esta sesión)</h4>
+                {adminUploadedBackgrounds.length === 0 ? (
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>No has subido ningún fondo en esta sesión.</p>
+                ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                    {allPresetBackgrounds.map((bg) => (
+                    {adminUploadedBackgrounds.map((preset) => (
                       <div
-                        key={bg.id}
-                        style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', cursor: 'pointer', border: `1px solid ${bg.isPremium && !isUserPremium ? '#f59e0b' : '#e5e7eb'}`, opacity: bg.isPremium && !isUserPremium ? 0.6 : 1, transition: 'all 0.2s' }}
-                        onClick={() => handleSelectPresetBackground(bg)}
+                        key={preset.id}
+                        style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}
                       >
-                        <img src={bg.url} alt={`Fondo ${bg.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        {bg.isPremium && (
-                          <span style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
+                        <img src={preset.url} alt={`Admin Uploaded ${preset.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {preset.isPremium && (
+                          <span style={{ position: 'absolute', top: '0.25rem', left: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
                             Premium
                           </span>
                         )}
-                        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
-                          <Plus size={24} style={{ color: '#ffffff', opacity: 0, transition: 'opacity 0.2s' }} />
-                        </div>
+                        <button
+                          onClick={() => handleDeleteAdminPreset(preset.id)}
+                          style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '9999px', padding: '0.25rem', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-
-              {/* Sección Administrar Fondos Personalizados */}
-              <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                <button
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                  onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen para esta sección
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ImageIcon size={16} />
-                    Administrar Fondos Personalizados
-                  </div>
-                  <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                </button>
-                {isAdjustOpen && (
-                  <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                    <p style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
-                      Aquí puedes subir nuevos fondos preestablecidos que se guardarán en tu propio sistema de medios (ej. `https://pixafree.online/admin/media`).
-                    </p>
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>Tipo de Fondo:</span>
-                      <div style={{ display: 'flex', gap: '1rem' }}>
-                        <label style={{ display: 'inline-flex', alignItems: 'center' }}>
-                          <input
-                            type="radio"
-                            style={{ /* formRadio: 'true', */ color: '#3b82f6' }}
-                            name="presetType"
-                            value="free"
-                            checked={!newPresetIsPremium}
-                            onChange={() => setNewPresetIsPremium(false)}
-                          />
-                          <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Gratis</span>
-                        </label>
-                        <label style={{ display: 'inline-flex', alignItems: 'center' }}>
-                          <input
-                            type="radio"
-                            style={{ /* formRadio: 'true', */ color: '#3b82f6' }}
-                            name="presetType"
-                            value="premium"
-                            checked={newPresetIsPremium}
-                            onChange={() => setNewPresetIsPremium(true)}
-                          />
-                          <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Premium</span>
-                        </label>
-                      </div>
-                    </div>
-                    <label htmlFor="adminUploadPreset" style={{ cursor: 'pointer', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', textAlign: 'center', display: 'block', backgroundColor: isUploadingAdminPreset ? '#93c5fd' : '#3b82f6', color: '#ffffff' }}>
-                      {isUploadingAdminPreset ? 'Subiendo...' : 'Subir Nuevo Fondo'}
-                    </label>
-                    <input
-                      id="adminUploadPreset"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAdminUploadPreset}
-                      style={{ display: 'none' }}
-                      ref={adminUploadPresetRef}
-                      disabled={isUploadingAdminPreset}
-                    />
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      **Nota:** La subida es solo para demostración en esta sesión. Para persistencia, debes integrar con tu API.
-                    </p>
-
-                    <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem', marginBottom: '0.5rem' }}>Fondos Subidos (Solo en esta sesión)</h4>
-                    {adminUploadedBackgrounds.length === 0 ? (
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>No has subido ningún fondo en esta sesión.</p>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                        {adminUploadedBackgrounds.map((preset) => (
-                          <div
-                            key={preset.id}
-                            style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}
-                          >
-                            <img src={preset.url} alt={`Admin Uploaded ${preset.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            {preset.isPremium && (
-                              <span style={{ position: 'absolute', top: '0.25rem', left: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
-                                Premium
-                              </span>
-                            )}
-                            <button
-                              onClick={() => handleDeleteAdminPreset(preset.id)}
-                              style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '9999px', padding: '0.25rem', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s' }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                      **Implementación:** Para que los fondos subidos persistan y estén disponibles para todos los usuarios, deberás:
-                      <br/>1. Llamar a tu API de backend (`https://pixafree.online/admin/media` o similar) en `handleAdminUploadPreset` para subir el archivo, incluyendo el estado `isPremium`.
-                      <br/>2. Llamar a tu API en `handleDeleteAdminPreset` para eliminar el archivo.
-                      <br/>3. En la sección "Fondos Preestablecidos", deberás cargar las URLs y el estado `isPremium` de las imágenes desde tu API de medios al inicio de la aplicación.
-                    </p>
-                  </div>
                 )}
-              </div>
-
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                  **Implementación:** Para que los fondos subidos persistan y estén disponibles para todos los usuarios, deberás:
+                  <br/>1. Llamar a tu API de backend (`https://pixafree.online/admin/media` o similar) en `handleAdminUploadPreset` para subir el archivo, incluyendo el estado `isPremium`.
+                  <br/>2. Llamar a tu API en `handleDeleteAdminPreset` para eliminar el archivo.
+                  <br/>3. En la sección "Fondos Preestablecidos", deberás cargar las URLs y el estado `isPremium` de las imágenes desde tu API de medios al inicio de la aplicación.
+                </p>
+              </CollapsibleSection>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -2139,648 +2083,543 @@ export default function EditorPage() {
               )}
 
               {isProductSelected && (
-                // Sección Propiedades del Producto
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <ImageIcon size={16} />
-                      Propiedades del Producto
-                    </div>
-                    <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isAdjustOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <div>
-                        <label htmlFor="productOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(productOpacity * 100).toFixed(0)}%</label>
-                        <input
-                          id="productOpacity"
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={productOpacity}
-                          onChange={(e) => { setProductOpacity(Number(e.target.value)); onTransformEndCommit(); }}
-                          style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <CollapsibleSection title="Propiedades del Producto" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
+                  <div>
+                    <label htmlFor="productOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(productOpacity * 100).toFixed(0)}%</label>
+                    <input
+                      id="productOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={productOpacity}
+                      onChange={(e) => { setProductOpacity(Number(e.target.value)); onTransformEndCommit(); }}
+                      style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                    />
+                  </div>
+                </CollapsibleSection>
               )}
 
               {selectedCanvasElement === 'background' && (
-                // Sección Propiedades del Fondo
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Layout size={16} />
-                      Propiedades del Fondo
-                    </div>
-                    <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isAdjustOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <div>
-                        <label htmlFor="backgroundOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(backgroundOpacity * 100).toFixed(0)}%</label>
-                        <input
-                          id="backgroundOpacity"
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={backgroundOpacity}
-                          onChange={(e) => { setBackgroundOpacity(Number(e.target.value)); onTransformEndCommit(); }}
-                          style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <CollapsibleSection title="Propiedades del Fondo" isOpen={true} setIsOpen={() => {}} icon={Layout}>
+                  <div>
+                    <label htmlFor="backgroundOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(backgroundOpacity * 100).toFixed(0)}%</label>
+                    <input
+                      id="backgroundOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={backgroundOpacity}
+                      onChange={(e) => { setBackgroundOpacity(Number(e.target.value)); onTransformEndCommit(); }}
+                      style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                    />
+                  </div>
+                </CollapsibleSection>
               )}
 
               {isTextSelected && currentTextElement && (
-                // Sección Propiedades del Texto
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <TextCursorInput size={16} />
-                      Propiedades del Texto
+                <CollapsibleSection title="Propiedades del Texto" isOpen={true} setIsOpen={() => {}} icon={TextCursorInput}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label htmlFor="textContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido del Texto</label>
+                      <textarea
+                        id="textContent"
+                        value={currentTextElement.text}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { text: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                        rows={3}
+                      />
                     </div>
-                    <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isAdjustOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div>
-                          <label htmlFor="textContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido del Texto</label>
-                          <textarea
-                            id="textContent"
-                            value={currentTextElement.text}
-                            onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { text: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
-                            rows={3}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="fontSize" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Tamaño de Fuente: {currentTextElement.fontSize.toFixed(0)}</label>
-                          <input
-                            id="fontSize"
-                            type="range"
-                            min="10"
-                            max="100"
-                            value={currentTextElement.fontSize}
-                            onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontSize: Number(e.target.value) })}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="textColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Texto</label>
-                          <input
-                            id="textColor"
-                            type="color"
-                            value={currentTextElement.fill}
-                            onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fill: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="fontFamily" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Familia de Fuente</label>
-                          <select
-                            id="fontFamily"
-                            value={currentTextElement.fontFamily}
-                            onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontFamily: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
-                          >
-                            <option value="Arial">Arial</option>
-                            <option value="Verdana">Verdana</option>
-                            <option value="Helvetica">Helvetica</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Courier New">Courier New</option>
-                            <option value="monospace">Monospace</option>
-                            <option value="Impact">Impact</option>
-                            <option value="Trebuchet MS">Trebuchet MS</option>
-                            <option value="Montserrat">Montserrat</option>
-                            <option value="Open Sans">Open Sans</option>
-                            <option value="Roboto">Roboto</option>
-                            <option value="Bebas Neue">Bebas Neue</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="textAlign" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Alineación de Texto</label>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'left' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'left' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'left' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              Izquierda
-                            </button>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'center' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'center' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'center' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              Centro
-                            </button>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'right' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'right' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'right' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              Derecha
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <label htmlFor="textDecoration" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Estilo de Texto</label>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'bold' ? 'none' : 'bold' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'bold', backgroundColor: currentTextElement.textDecoration === 'bold' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'bold' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              B
-                            </button>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { fontStyle: currentTextElement.fontStyle === 'italic' ? 'normal' : 'italic' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontStyle: 'italic', backgroundColor: currentTextElement.fontStyle === 'italic' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.fontStyle === 'italic' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              I
-                            </button>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'underline' ? 'none' : 'underline' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', textDecoration: 'underline', backgroundColor: currentTextElement.textDecoration === 'underline' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'underline' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              U
-                            </button>
-                            <button
-                              onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'line-through' ? 'none' : 'line-through' }); onTransformEndCommit(); }}
-                              style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', textDecoration: 'line-through', backgroundColor: currentTextElement.textDecoration === 'line-through' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'line-through' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                            >
-                              S
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <label htmlFor="textStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Contorno</label>
-                          <input
-                            id="textStrokeColor"
-                            type="color"
-                            value={currentTextElement.stroke || '#000000'}
-                            onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { stroke: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="textStrokeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Grosor de Contorno: {currentTextElement.strokeWidth?.toFixed(0) || 0}</label>
-                          <input
-                            id="textStrokeWidth"
-                            type="range"
-                            min="0"
-                            max="5"
-                            step="0.1"
-                            value={currentTextElement.strokeWidth || 0}
-                            onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { strokeWidth: Number(e.target.value) })}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                          />
-                        </div>
+                    <div>
+                      <label htmlFor="fontSize" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Tamaño de Fuente: {currentTextElement.fontSize.toFixed(0)}</label>
+                      <input
+                        id="fontSize"
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={currentTextElement.fontSize}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontSize: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="textColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Texto</label>
+                      <input
+                        id="textColor"
+                        type="color"
+                        value={currentTextElement.fill}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fill: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="fontFamily" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Familia de Fuente</label>
+                      <select
+                        id="fontFamily"
+                        value={currentTextElement.fontFamily}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontFamily: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="monospace">Monospace</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Trebuchet MS">Trebuchet MS</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="textAlign" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Alineación de Texto</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'left' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'left' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'left' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          Izquierda
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'center' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'center' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'center' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          Centro
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'right' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: currentTextElement.align === 'right' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.align === 'right' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          Derecha
+                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <label htmlFor="textDecoration" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Estilo de Texto</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'bold' ? 'none' : 'bold' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'bold', backgroundColor: currentTextElement.textDecoration === 'bold' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'bold' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          B
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { fontStyle: currentTextElement.fontStyle === 'italic' ? 'normal' : 'italic' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontStyle: 'italic', backgroundColor: currentTextElement.fontStyle === 'italic' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.fontStyle === 'italic' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          I
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'underline' ? 'none' : 'underline' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', textDecoration: 'underline', backgroundColor: currentTextElement.textDecoration === 'underline' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'underline' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          U
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'line-through' ? 'none' : 'line-through' }); onTransformEndCommit(); }}
+                          style={{ padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', textDecoration: 'line-through', backgroundColor: currentTextElement.textDecoration === 'line-through' ? '#3b82f6' : '#e5e7eb', color: currentTextElement.textDecoration === 'line-through' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                        >
+                          S
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="textStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Contorno</label>
+                      <input
+                        id="textStrokeColor"
+                        type="color"
+                        value={currentTextElement.stroke || '#000000'}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { stroke: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="textStrokeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Grosor de Contorno: {currentTextElement.strokeWidth?.toFixed(0) || 0}</label>
+                      <input
+                        id="textStrokeWidth"
+                        type="range"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={currentTextElement.strokeWidth || 0}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { strokeWidth: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                      />
+                    </div>
+                  </div>
+                </CollapsibleSection>
               )}
 
               {isShapeSelected && currentShapeElement && (
-                // Sección Propiedades de la Figura
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <PenTool size={16} />
-                      Propiedades de la Figura
-                    </div>
-                    <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isAdjustOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {currentShapeElement.type === 'rect' && (
-                          <>
-                            <div>
-                              <label htmlFor="shapeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Ancho: {currentShapeElement.width?.toFixed(0)}</label>
-                              <input
-                                id="shapeWidth"
-                                type="range"
-                                min="10"
-                                max={CANVAS_SIZE / 2}
-                                value={currentShapeElement.width}
-                                onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { width: Number(e.target.value) })}
-                                onMouseUp={onTransformEndCommit}
-                                onTouchEnd={onTransformEndCommit}
-                                style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="shapeHeight" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Alto: {currentShapeElement.height?.toFixed(0)}</label>
-                              <input
-                                id="shapeHeight"
-                                type="range"
-                                min="10"
-                                max={CANVAS_SIZE / 2}
-                                value={currentShapeElement.height}
-                                onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { height: Number(e.target.value) })}
-                                onMouseUp={onTransformEndCommit}
-                                onTouchEnd={onTransformEndCommit}
-                                style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                              />
-                            </div>
-                          </>
-                        )}
-                        {currentShapeElement.type === 'circle' && (
-                          <div>
-                            <label htmlFor="shapeRadius" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Radio: {currentShapeElement.radius?.toFixed(0)}</label>
-                            <input
-                              id="shapeRadius"
-                              type="range"
-                              min="5"
-                              max={CANVAS_SIZE / 4}
-                              value={currentShapeElement.radius}
-                              onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { radius: Number(e.target.value) })}
-                              onMouseUp={onTransformEndCommit}
-                              onTouchEnd={onTransformEndCommit}
-                              style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                            />
-                          </div>
-                        )}
-                        {currentShapeElement.type !== 'line' && (
-                          <div>
-                            <label htmlFor="shapeFillColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Relleno</label>
-                            <input
-                              id="shapeFillColor"
-                              type="color"
-                              value={currentShapeElement.fill}
-                              onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { fill: e.target.value })}
-                              onBlur={onTransformEndCommit}
-                              style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
-                            />
-                          </div>
-                        )}
+                <CollapsibleSection title="Propiedades de la Figura" isOpen={true} setIsOpen={() => {}} icon={PenTool}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {currentShapeElement.type === 'rect' && (
+                      <>
                         <div>
-                          <label htmlFor="shapeStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Borde</label>
+                          <label htmlFor="shapeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Ancho: {currentShapeElement.width?.toFixed(0)}</label>
                           <input
-                            id="shapeStrokeColor"
-                            type="color"
-                            value={currentShapeElement.stroke}
-                            onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { stroke: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="shapeStrokeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Grosor de Borde: {currentShapeElement.strokeWidth.toFixed(0)}</label>
-                          <input
-                            id="shapeStrokeWidth"
-                            type="range"
-                            min="0"
-                            max="10"
-                            value={currentShapeElement.strokeWidth}
-                            onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { strokeWidth: Number(e.target.value) })}
-                            onMouseUp={onTransformEndCommit}
-                            onTouchEnd={onTransformEndCommit}
-                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {isDateSelected && currentDateElement && (
-                // Sección Propiedades de la Fecha
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Layout size={16} />
-                      Propiedades de la Fecha
-                    </div>
-                    <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isAdjustOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div>
-                          <label htmlFor="dateContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido de la Fecha</label>
-                          <input
-                            id="dateContent"
-                            type="text"
-                            value={currentDateElement.text}
-                            onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="dateFormat" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Formato de Fecha</label>
-                          <select
-                            id="dateFormat"
-                            value={currentDateElement.format}
-                            onChange={(e) => {
-                              const newFormat = e.target.value;
-                              const today = new Date();
-                              handleUpdateDateElement({ format: newFormat, text: formatDate(today, newFormat) });
-                            }}
-                            onBlur={onTransformEndCommit}
-                            style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
-                          >
-                            <option value="DD/MM/YYYY">DD/MM/YYYY (ej. 12/07/2025)</option>
-                            <option value="MMMM DD, YYYY">MMMM DD, YYYY (ej. Julio 12, 2025)</option>
-                            <option value="YYYY-MM-DD">YYYY-MM-DD (ej. 2025-07-12)</option>
-                            <option value="DD MMMM YYYY">DD MMMM YYYY (ej. 12 Julio 2025)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="dateFontSize" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Tamaño de Fuente: {currentDateElement.fontSize.toFixed(0)}</label>
-                          <input
-                            id="dateFontSize"
+                            id="shapeWidth"
                             type="range"
                             min="10"
-                            max="100"
-                            value={currentDateElement.fontSize}
-                            onChange={(e) => handleUpdateDateElement({ fontSize: Number(e.target.value) })}
+                            max={CANVAS_SIZE / 2}
+                            value={currentShapeElement.width}
+                            onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { width: Number(e.target.value) })}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
                             style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
                         <div>
-                          <label htmlFor="dateTextColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Texto</label>
+                          <label htmlFor="shapeHeight" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Alto: {currentShapeElement.height?.toFixed(0)}</label>
                           <input
-                            id="dateTextColor"
-                            type="color"
-                            value={currentDateElement.fill}
-                            onChange={(e) => handleUpdateDateElement({ fill: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                            id="shapeHeight"
+                            type="range"
+                            min="10"
+                            max={CANVAS_SIZE / 2}
+                            value={currentShapeElement.height}
+                            onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { height: Number(e.target.value) })}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
-                        <div>
-                          <label htmlFor="dateFontFamily" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Familia de Fuente</label>
-                          <select
-                            id="dateFontFamily"
-                            value={currentDateElement.fontFamily}
-                            onChange={(e) => handleUpdateDateElement({ fontFamily: e.target.value })}
-                            onBlur={onTransformEndCommit}
-                            style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
-                          >
-                            <option value="Arial">Arial</option>
-                            <option value="Verdana">Verdana</option>
-                            <option value="Helvetica">Helvetica</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Courier New">Courier New</option>
-                            <option value="monospace">Monospace</option>
-                            <option value="Impact">Impact</option>
-                            <option value="Trebuchet MS">Trebuchet MS</option>
-                            <option value="Open Sans">Open Sans</option>
-                            <option value="Roboto">Roboto</option>
-                            <option value="Bebas Neue">Bebas Neue</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {isImageSelected && currentImageElement && (
-                // Sección Propiedades de la Imagen
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsAdjustOpen(!isAdjustOpen)} // Reutilizamos isAdjustOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <ImageIcon size={16} />
-                      Propiedades de la Imagen
-                    </div>
-                    <ChevronRight size={16} style={{ transform: isAdjustOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isAdjustOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
+                      </>
+                    )}
+                    {currentShapeElement.type === 'circle' && (
                       <div>
-                        <label htmlFor="imageOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(currentImageElement.opacity * 100).toFixed(0)}%</label>
+                        <label htmlFor="shapeRadius" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Radio: {currentShapeElement.radius?.toFixed(0)}</label>
                         <input
-                          id="imageOpacity"
+                          id="shapeRadius"
                           type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={currentImageElement.opacity}
-                          onChange={(e) => handleUpdateImageElement(selectedImageElementId!, { opacity: Number(e.target.value) })}
+                          min="5"
+                          max={CANVAS_SIZE / 4}
+                          value={currentShapeElement.radius}
+                          onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { radius: Number(e.target.value) })}
                           onMouseUp={onTransformEndCommit}
                           onTouchEnd={onTransformEndCommit}
                           style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                         />
                       </div>
+                    )}
+                    {currentShapeElement.type !== 'line' && (
+                      <div>
+                        <label htmlFor="shapeFillColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Relleno</label>
+                        <input
+                          id="shapeFillColor"
+                          type="color"
+                          value={currentShapeElement.fill}
+                          onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { fill: e.target.value })}
+                          onBlur={onTransformEndCommit}
+                          style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label htmlFor="shapeStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Borde</label>
+                      <input
+                        id="shapeStrokeColor"
+                        type="color"
+                        value={currentShapeElement.stroke}
+                        onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { stroke: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                      />
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <label htmlFor="shapeStrokeWidth" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Grosor de Borde: {currentShapeElement.strokeWidth.toFixed(0)}</label>
+                      <input
+                        id="shapeStrokeWidth"
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={currentShapeElement.strokeWidth}
+                        onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { strokeWidth: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                      />
+                    </div>
+                  </div>
+                </CollapsibleSection>
+              )}
+
+              {isDateSelected && currentDateElement && (
+                <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={() => {}} icon={Layout}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label htmlFor="dateContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido de la Fecha</label>
+                      <input
+                        id="dateContent"
+                        type="text"
+                        value={currentDateElement.text}
+                        onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dateFormat" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Formato de Fecha</label>
+                      <select
+                        id="dateFormat"
+                        value={currentDateElement.format}
+                        onChange={(e) => {
+                          const newFormat = e.target.value;
+                          const today = new Date();
+                          handleUpdateDateElement({ format: newFormat, text: formatDate(today, newFormat) });
+                        }}
+                        onBlur={onTransformEndCommit}
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                      >
+                        <option value="DD/MM/YYYY">DD/MM/YYYY (ej. 12/07/2025)</option>
+                        <option value="MMMM DD, YYYY">MMMM DD, YYYY (ej. Julio 12, 2025)</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD (ej. 2025-07-12)</option>
+                        <option value="DD MMMM YYYY">DD MMMM YYYY (ej. 12 Julio 2025)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="dateFontSize" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Tamaño de Fuente: {currentDateElement.fontSize.toFixed(0)}</label>
+                      <input
+                        id="dateFontSize"
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={currentDateElement.fontSize}
+                        onChange={(e) => handleUpdateDateElement({ fontSize: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dateTextColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Texto</label>
+                      <input
+                        id="dateTextColor"
+                        type="color"
+                        value={currentDateElement.fill}
+                        onChange={(e) => handleUpdateDateElement({ fill: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dateFontFamily" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Familia de Fuente</label>
+                      <select
+                        id="dateFontFamily"
+                        value={currentDateElement.fontFamily}
+                        onChange={(e) => handleUpdateDateElement({ fontFamily: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="monospace">Monospace</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Trebuchet MS">Trebuchet MS</option>
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                      </select>
+                    </div>
+                  </div>
+                </CollapsibleSection>
+              )}
+
+              {isImageSelected && currentImageElement && (
+                <CollapsibleSection title="Propiedades de la Imagen" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
+                  <div>
+                    <label htmlFor="imageOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad: {(currentImageElement.opacity * 100).toFixed(0)}%</label>
+                    <input
+                      id="imageOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={currentImageElement.opacity}
+                      onChange={(e) => handleUpdateImageElement(selectedImageElementId!, { opacity: Number(e.target.value) })}
+                      onMouseUp={onTransformEndCommit}
+                      onTouchEnd={onTransformEndCommit}
+                      style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                    />
+                  </div>
+                </CollapsibleSection>
               )}
 
               {isAnyEditableElementSelected && (
-                // Sección Ajustes Generales
-                <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                  <button
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: '#f3f4f6', color: '#4b5563', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
-                    onClick={() => setIsTextureOpen(!isTextureOpen)} // Reutilizamos isTextureOpen
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Settings size={16} />
-                      Ajustes Generales
+                <CollapsibleSection title="Ajustes Generales" isOpen={true} setIsOpen={() => {}} icon={Settings}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label htmlFor="blurRadius" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
+                      <input
+                        id="blurRadius"
+                        type="range"
+                        min="0"
+                        max="20"
+                        value={currentElementProps.blurRadius}
+                        onChange={(e) => { currentElementProps.setBlurRadius(Number(e.target.value)); onTransformEndCommit(); }}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                      />
                     </div>
-                    <ChevronRight size={16} style={{ transform: isTextureOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                  </button>
-                  {isTextureOpen && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Sombra</span>
+                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          value=""
+                          style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+                          checked={currentElementProps.shadowEnabled}
+                          onChange={handleToggleShadow}
+                        />
+                        <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
+                        <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
+                      </label>
+                    </div>
+                    {currentElementProps.shadowEnabled && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.375rem', border: '1px solid #e5e7eb', marginTop: '0.5rem' }}>
                         <div>
-                          <label htmlFor="blurRadius" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
+                          <label htmlFor="shadowColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Sombra</label>
                           <input
-                            id="blurRadius"
+                            id="shadowColor"
+                            type="color"
+                            value={currentElementProps.shadowColor}
+                            onChange={(e) => { currentElementProps.setShadowColor(e.target.value); onTransformEndCommit(); }}
+                            onBlur={onTransformEndCommit}
+                            style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="shadowBlur" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
+                          <input
+                            id="shadowBlur"
                             type="range"
                             min="0"
                             max="20"
-                            value={currentElementProps.blurRadius}
-                            onChange={(e) => { currentElementProps.setBlurRadius(Number(e.target.value)); onTransformEndCommit(); }}
+                            value={currentElementProps.shadowBlur}
+                            onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
                             onMouseUp={onTransformEndCommit}
                             onTouchEnd={onTransformEndCommit}
                             style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
                           />
                         </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                          <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Sombra</span>
-                          <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              value=""
-                              style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
-                              checked={currentElementProps.shadowEnabled}
-                              onChange={handleToggleShadow}
-                            />
-                            <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
-                            <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
-                          </label>
+                        <div>
+                          <label htmlFor="shadowOffsetX" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
+                          <input
+                            id="shadowOffsetX"
+                            type="range"
+                            min="-20"
+                            max="20"
+                            value={currentElementProps.shadowOffsetX}
+                            onChange={(e) => { currentElementProps.setShadowOffsetX(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                          />
                         </div>
-                        {currentElementProps.shadowEnabled && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.375rem', border: '1px solid #e5e7eb', marginTop: '0.5rem' }}>
-                            <div>
-                              <label htmlFor="shadowColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Sombra</label>
-                              <input
-                                id="shadowColor"
-                                type="color"
-                                value={currentElementProps.shadowColor}
-                                onChange={(e) => { currentElementProps.setShadowColor(e.target.value); onTransformEndCommit(); }}
-                                onBlur={onTransformEndCommit}
-                                style={{ width: '100%', height: '2.5rem', borderRadius: '0.375rem', cursor: 'pointer', border: 'none' }}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="shadowBlur" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
-                              <input
-                                id="shadowBlur"
-                                type="range"
-                                min="0"
-                                max="20"
-                                value={currentElementProps.shadowBlur}
-                                onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
-                                onMouseUp={onTransformEndCommit}
-                                onTouchEnd={onTransformEndCommit}
-                                style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="shadowOffsetX" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
-                              <input
-                                id="shadowOffsetX"
-                                type="range"
-                                min="-20"
-                                max="20"
-                                value={currentElementProps.shadowOffsetX}
-                                onChange={(e) => { currentElementProps.setShadowOffsetX(Number(e.target.value)); onTransformEndCommit(); }}
-                                onMouseUp={onTransformEndCommit}
-                                onTouchEnd={onTransformEndCommit}
-                                style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="shadowOffsetY" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
-                              <input
-                                id="shadowOffsetY"
-                                type="range"
-                                min="-20"
-                                max="20"
-                                value={currentElementProps.shadowOffsetY}
-                                onChange={(e) => { currentElementProps.setShadowOffsetY(Number(e.target.value)); onTransformEndCommit(); }}
-                                onMouseUp={onTransformEndCommit}
-                                onTouchEnd={onTransformEndCommit}
-                                style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="shadowOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
-                              <input
-                                id="shadowOpacity"
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={currentElementProps.shadowOpacity}
-                                onChange={(e) => { currentElementProps.setShadowOpacity(Number(e.target.value)); onTransformEndCommit(); }}
-                                onMouseUp={onTransformEndCommit}
-                                onTouchEnd={onTransformEndCommit}
-                                style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                          <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Reflejo</span>
-                          <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              value=""
-                              style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
-                              checked={currentElementProps.reflectionEnabled}
-                              onChange={handleToggleReflection}
-                            />
-                            <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
-                            <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
-                          </label>
+                        <div>
+                          <label htmlFor="shadowOffsetY" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
+                          <input
+                            id="shadowOffsetY"
+                            type="range"
+                            min="-20"
+                            max="20"
+                            value={currentElementProps.shadowOffsetY}
+                            onChange={(e) => { currentElementProps.setShadowOffsetY(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                          />
                         </div>
-
-                        <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem' }}>Voltear</h4>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => handleFlip('x')}
-                            style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', cursor: 'pointer' }}
-                          >
-                            Voltear Horizontal
-                          </button>
-                          <button
-                            onClick={() => handleFlip('y')}
-                            style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', cursor: 'pointer' }}
-                          >
-                            Voltear Vertical
-                          </button>
-                        </div>
-
-                        <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem' }}>Filtros</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => handleApplyFilter('none')}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'none' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'none' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                          >
-                            Ninguno
-                          </button>
-                          <button
-                            onClick={() => handleApplyFilter('grayscale')}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'grayscale' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'grayscale' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                          >
-                            Escala de Grises
-                          </button>
-                          <button
-                            onClick={() => handleApplyFilter('sepia')}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'sepia' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'sepia' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
-                          >
-                            Sepia
-                          </button>
+                        <div>
+                          <label htmlFor="shadowOpacity" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
+                          <input
+                            id="shadowOpacity"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={currentElementProps.shadowOpacity}
+                            onChange={(e) => { currentElementProps.setShadowOpacity(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            style={{ width: '100%', height: '0.5rem', backgroundColor: '#d1d5db', borderRadius: '0.5rem', appearance: 'none', cursor: 'pointer' }}
+                          />
                         </div>
                       </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Reflejo</span>
+                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          value=""
+                          style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+                          checked={currentElementProps.reflectionEnabled}
+                          onChange={handleToggleReflection}
+                        />
+                        <div style={{ width: '2.75rem', height: '1.5rem', backgroundColor: '#e5e7eb', borderRadius: '9999px', transition: 'background-color 0.2s' }}></div>
+                        <div style={{ content: '""', position: 'absolute', top: '2px', left: '2px', backgroundColor: '#ffffff', border: '1px solid #d1d5db', borderRadius: '9999px', height: '1.25rem', width: '1.25rem', transition: 'transform 0.2s' }}></div>
+                      </label>
                     </div>
-                  )}
-                </div>
+
+                    <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem' }}>Voltear</h4>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => handleFlip('x')}
+                        style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', cursor: 'pointer' }}
+                      >
+                        Voltear Horizontal
+                      </button>
+                      <button
+                        onClick={() => handleFlip('y')}
+                        style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', cursor: 'pointer' }}
+                      >
+                        Voltear Vertical
+                      </button>
+                    </div>
+
+                    <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem' }}>Filtros</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => handleApplyFilter('none')}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'none' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'none' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                      >
+                        Ninguno
+                      </button>
+                      <button
+                        onClick={() => handleApplyFilter('grayscale')}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'grayscale' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'grayscale' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                      >
+                        Escala de Grises
+                      </button>
+                      <button
+                        onClick={() => handleApplyFilter('sepia')}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', backgroundColor: currentElementProps.filter === 'sepia' ? '#3b82f6' : '#e5e7eb', color: currentElementProps.filter === 'sepia' ? '#ffffff' : '#4b5563', border: 'none', cursor: 'pointer' }}
+                      >
+                        Sepia
+                      </button>
+                    </div>
+                  </div>
+                </CollapsibleSection>
               )}
             </div>
           )}
