@@ -10,6 +10,9 @@ import {
   FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler
 } from 'lucide-react';
 
+// Importa el CollapsibleSection que usa Radix UI y tiene los estilos de Tailwind
+import CollapsibleSection from '@/components/CollapsibleSection';
+
 // Firebase imports (kept for general app functionality like history, authentication)
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, Auth } from 'firebase/auth';
@@ -179,33 +182,6 @@ interface DisplayBackground {
 }
 
 const CANVAS_SIZE = 700;
-
-interface CollapsibleSectionProps {
-  title: string;
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-  children: React.ReactNode;
-  className?: string;
-  icon?: React.ElementType;
-}
-
-const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, isOpen, setIsOpen, children, className, icon: Icon }) => {
-  return (
-    <div className={`border border-gray-300 rounded-md mb-2 ${className}`}>
-      <button
-        className="w-full flex items-center justify-between p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex items-center gap-2">
-          {Icon && <Icon size={16} />}
-          {title}
-        </div>
-        <ChevronRight size={16} className={`transform transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-      </button>
-      {isOpen && <div className="p-3 border-t border-gray-300">{children}</div>}
-    </div>
-  );
-};
 
 export default function EditorPage() {
   const searchParams = useSearchParams();
@@ -1539,7 +1515,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }), // Corrected here
+      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateImageElement(selectedImageElementId!, { filter: val }),
