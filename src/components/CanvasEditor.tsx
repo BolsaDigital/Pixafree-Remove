@@ -137,7 +137,7 @@ interface CanvasEditorProps {
   setProductX: (x: number) => void;
   setProductY: (y: number) => void;
   setProductScale: (scale: number) => void;
-  // NEW: Prop para notificar al padre que el producto ha sido escalado/movido manualmente
+  // NEW: Prop to notify parent that product has been manually scaled/moved
   setHasProductBeenScaledManually: (value: boolean) => void;
 
 
@@ -379,7 +379,10 @@ const CanvasEditor: React.FC<CanvasEditorProps> = ({
       // Assuming imageElement.scaleX/Y in state are magnitudes.
       onImageUpdate(id, { x, y, scaleX: currentKonvaScaleX, scaleY: currentKonvaScaleY, rotation });
     }
-    node.getLayer().batchDraw();
+    const layer = node.getLayer();
+    if (layer) {
+      layer.batchDraw();
+    }
     onTransformEndCommit(); // Commit after any transformation or drag
   }, [setProductX, setProductY, setProductScale, onProductRotate, setHasProductBeenScaledManually, onTextUpdate, onShapeUpdate, onDateUpdate, onImageUpdate, onTransformEndCommit, textElements, shapeElements, dateElement]);
 
