@@ -1,19 +1,19 @@
 // src/app/editor/page.tsx
-'use client'; // <--- ¡Asegúrate de que esta línea esté aquí!
+'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
-  Download, Type, Image as ImageIcon, Layout, Circle, Square, Calendar, Trash2, Undo2, Redo2, Sparkles, Plus, Palette, TextCursorInput, PenTool, CreditCard, DollarSign,
-  Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown, PlusSquare, RotateCcw, RotateCw, ImageMinus, // 'Blur' removed
-  FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler // 'Ruler' added
+  Download, Image as ImageIcon, Layout, Sparkles, Plus, TextCursorInput, PenTool, ImageMinus,
+  Trash2, Undo2, Redo2, Copy, PaintBucket, BringToFront, SendToBack, ChevronUp, ChevronDown,
+  PlusSquare, Settings, MoreHorizontal, Ruler, Palette as PaletteIcon, ChevronRight
 } from 'lucide-react';
 
 // Firebase imports (kept for general app functionality like history, authentication)
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, Auth } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, Firestore } from 'firebase/firestore';
+import { getAuth, signInAnonymously, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const DynamicCanvasEditor = dynamic(
   () => import('@/components/CanvasEditor'),
@@ -191,18 +191,18 @@ interface CollapsibleSectionProps {
 
 const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, isOpen, setIsOpen, children, className, icon: Icon }) => {
   return (
-    <div className={`rounded-lg border border-gray-200 overflow-hidden ${className}`}>
+    <div className={`border border-gray-300 rounded-md mb-2 ${className}`}>
       <button
-        className="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-base font-semibold transition-colors duration-200"
+        className="w-full flex items-center justify-between p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-2">
-          {Icon && <Icon size={18} />}
+          {Icon && <Icon size={16} />}
           {title}
         </div>
-        <ChevronRight size={18} className={`transform transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+        <ChevronRight size={16} className={`transform transition-transform ${isOpen ? 'rotate-90' : ''}`} />
       </button>
-      {isOpen && <div className="p-4 bg-gray-50 border-t border-gray-200">{children}</div>}
+      {isOpen && <div className="p-3 border-t border-gray-300">{children}</div>}
     </div>
   );
 };
@@ -346,10 +346,8 @@ export default function EditorPage() {
   // Initialize Firebase (for auth and history)
   useEffect(() => {
     try {
-      // En un despliegue real en EC2, __firebase_config y __app_id no existen.
-      // Usamos variables de entorno de Next.js que deben ser configuradas en el servidor.
       const firebaseConfigString = process.env.NEXT_PUBLIC_FIREBASE_CONFIG;
-      const currentAppId = process.env.NEXT_PUBLIC_APP_ID || 'default-app-id'; // Puedes definir un ID de app por defecto
+      const currentAppId = process.env.NEXT_PUBLIC_APP_ID || 'default-app-id';
 
       if (!firebaseConfigString) {
         console.error("NEXT_PUBLIC_FIREBASE_CONFIG no está definida. Firebase no se inicializará.");
@@ -367,10 +365,6 @@ export default function EditorPage() {
       setAppId(currentAppId);
 
       const setupAuth = async () => {
-        // En un despliegue real en EC2, __initial_auth_token no está disponible.
-        // Típicamente, iniciarías sesión usando métodos estándar de Firebase (email/contraseña, Google, etc.)
-        // o generarías un token personalizado desde tu propio backend.
-        // Para mantener la funcionalidad de prueba de la app, usaremos signInAnonymously si no hay otra autenticación.
         await signInAnonymously(firebaseAuth);
         setUserId(firebaseAuth.currentUser?.uid || crypto.randomUUID());
       };
@@ -1474,11 +1468,11 @@ export default function EditorPage() {
   } else if (selectedCanvasElement === 'background') {
     currentElementProps = {
       opacity: backgroundOpacity, blurRadius: backgroundBlurRadius,
-      shadowEnabled: backgroundShadowEnabled, shadowColor: backgroundShadowColor, shadowBlur: backgroundShadowBlur, shadowOffsetX: backgroundShadowOffsetX, backgroundShadowOffsetY: backgroundShadowOffsetY, backgroundShadowOpacity: backgroundShadowOpacity,
+      shadowEnabled: backgroundShadowEnabled, shadowColor: backgroundShadowColor, shadowBlur: backgroundShadowBlur, shadowOffsetX: backgroundShadowOffsetX, shadowOffsetY: backgroundShadowOffsetY, shadowOpacity: backgroundShadowOpacity,
       reflectionEnabled: backgroundReflectionEnabled,
       filter: backgroundFilter,
       setOpacity: setBackgroundOpacity, setBlurRadius: setBackgroundBlurRadius,
-      setShadowEnabled: setBackgroundShadowEnabled, setShadowColor: setBackgroundShadowColor, setShadowBlur: setBackgroundBlurRadius, setShadowOffsetX: setBackgroundShadowOffsetX, setBackgroundShadowOffsetY: setBackgroundShadowOffsetY, setBackgroundShadowOpacity: setBackgroundShadowOpacity,
+      setShadowEnabled: setBackgroundShadowEnabled, setShadowColor: setBackgroundShadowColor, setShadowBlur: setBackgroundBlurRadius, setShadowOffsetX: setBackgroundShadowOffsetX, setShadowOffsetY: setBackgroundShadowOffsetY, setShadowOpacity: setBackgroundShadowOpacity,
       setReflectionEnabled: setBackgroundReflectionEnabled,
       setFilter: setBackgroundFilter,
     };
@@ -1511,7 +1505,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateShapeElement(selectedShapeElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetX: val }),
-     setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateShapeElement(selectedShapeElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateShapeElement(selectedShapeElementId!, { filter: val }),
@@ -1528,7 +1522,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateDateElement({ shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateDateElement({ blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateDateElement({ shadowOffsetX: val }),
-     setShadowOffsetY: (val: number) => handleUpdateDateElement({ shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateDateElement({ shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateDateElement({ shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateDateElement({ reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateDateElement({ filter: val }),
@@ -1650,17 +1644,16 @@ export default function EditorPage() {
 
 
   return (
-    <div className="h-screen flex flex-col font-sans relative bg-gray-50">
-      <header className="w-full bg-white shadow-md p-4 flex items-center justify-between z-20 flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">📸 Pixafree</h1>
-          <div className="flex gap-2 ml-4">
+    <div className="flex flex-col h-screen font-sans bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow-md p-4 flex items-center justify-between z-10">
+        <div className="flex items-center">
+          <h1 className="text-2xl font-bold text-gray-800 mr-4">📸 Pixafree</h1>
+          <div className="flex space-x-2">
             <button
               onClick={handleUndo}
               disabled={historyPointer <= 0}
-              className={`p-2 rounded-full transition duration-200 ${
-                historyPointer <= 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-              }`}
+              className={`p-2 rounded-full ${historyPointer <= 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-700'}`}
               title="Deshacer"
             >
               <Undo2 size={20} />
@@ -1668,9 +1661,7 @@ export default function EditorPage() {
             <button
               onClick={handleRedo}
               disabled={historyPointer >= history.length - 1}
-              className={`p-2 rounded-full transition duration-200 ${
-                historyPointer >= history.length - 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-              }`}
+              className={`p-2 rounded-full ${historyPointer >= history.length - 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-700'}`}
               title="Rehacer"
             >
               <Redo2 size={20} />
@@ -1678,170 +1669,118 @@ export default function EditorPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <button
-            onClick={() => unifiedImageUploadRef.current?.click()}
-            className="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group"
-            title="Subir Imagen"
-          >
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleUnifiedImageUpload}
-              className="hidden"
-              ref={unifiedImageUploadRef}
-            />
-            <label htmlFor="unified-image-upload" className="cursor-pointer flex flex-col items-center">
-              <ImageIcon size={24} className="group-hover:scale-110 transition-transform" />
-              <span>Imagen</span>
-            </label>
+        {/* Main Tools */}
+        <div className="flex space-x-6">
+          <button onClick={() => unifiedImageUploadRef.current?.click()} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Subir Imagen">
+            <input type="file" accept="image/*" onChange={handleUnifiedImageUpload} className="hidden" ref={unifiedImageUploadRef} />
+            <ImageIcon size={24} />
+            <span className="text-xs">Imagen</span>
           </button>
-
-          <button
-            onClick={() => {
-              setRightSidebarView('backgrounds');
-              setIsGenerateSceneAIOpen(false); // Close AI section when switching to backgrounds
-            }}
-            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${rightSidebarView === 'backgrounds' ? 'text-blue-600 font-semibold' : ''}`}
-            title="Fondos"
-          >
-            <PaletteIcon size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Fondos</span>
+          <button onClick={() => { setRightSidebarView('backgrounds'); setIsGenerateSceneAIOpen(false); }} className={`flex flex-col items-center text-gray-700 hover:text-blue-600 ${rightSidebarView === 'backgrounds' ? 'text-blue-600 font-semibold' : ''}`} title="Fondos">
+            <PaletteIcon size={24} />
+            <span className="text-xs">Fondos</span>
           </button>
-
-          <button
-            onClick={() => handleAddText()}
-            className="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group"
-            title="Añadir Texto"
-          >
-            <TextCursorInput size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Texto</span>
+          <button onClick={() => handleAddText()} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Añadir Texto">
+            <TextCursorInput size={24} />
+            <span className="text-xs">Texto</span>
           </button>
-
-          <button
-            onClick={() => handleAddShape('rect')}
-            className="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group"
-            title="Añadir Forma"
-          >
-            <PenTool size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Forma</span>
+          <button onClick={() => handleAddShape('rect')} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Añadir Forma">
+            <PenTool size={24} />
+            <span className="text-xs">Forma</span>
           </button>
-
           <button
             onClick={processImageWithReplicate}
-            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${!isProductSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 ${!isProductSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Editar Recorte (Simulado)"
             disabled={!isProductSelected}
           >
-            <ImageMinus size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Recorte</span>
+            <ImageMinus size={24} />
+            <span className="text-xs">Recorte</span>
           </button>
-
           <button
             onClick={handleDeleteElement}
-            className={`flex flex-col items-center text-gray-700 hover:text-red-600 transition-colors text-sm group ${!isAnyEditableElementSelected && selectedCanvasElement !== 'background' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex flex-col items-center text-gray-700 hover:text-red-600 ${!isAnyEditableElementSelected && selectedCanvasElement !== 'background' ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Borrar Elemento Seleccionado"
             disabled={!isAnyEditableElementSelected && selectedCanvasElement !== 'background'}
           >
-            <Trash2 size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Borrar</span>
+            <Trash2 size={24} />
+            <span className="text-xs">Borrar</span>
           </button>
-
           <button
             onClick={handleDuplicateElement}
-            className={`flex flex-col items-center text-gray-700 hover:text-green-600 transition-colors text-sm group ${!isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex flex-col items-center text-gray-700 hover:text-green-600 ${!isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Duplicar Elemento Seleccionado"
             disabled={!isAnyEditableElementSelected}
           >
-            <PlusSquare size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Duplicar</span>
+            <PlusSquare size={24} />
+            <span className="text-xs">Duplicar</span>
           </button>
-
-          <button
-            onClick={() => setRightSidebarView('properties')}
-            className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${rightSidebarView === 'properties' ? 'text-blue-600 font-semibold' : ''}`}
-            title="Propiedades del Objeto Seleccionado"
-          >
-            <Settings size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Propiedades</span>
+          <button onClick={() => setRightSidebarView('properties')} className={`flex flex-col items-center text-gray-700 hover:text-blue-600 ${rightSidebarView === 'properties' ? 'text-blue-600 font-semibold' : ''}`} title="Propiedades del Objeto Seleccionado">
+            <Settings size={24} />
+            <span className="text-xs">Propiedades</span>
           </button>
-
-          {/* NEW: Toggle Center Guides Button */}
           <button
             onClick={() => setShowCenterGuides((prev) => !prev)}
             className={`flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group ${showCenterGuides ? 'text-blue-600 font-semibold' : ''}`}
             title="Alternar Guías Centrales"
           >
             <Ruler size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Guías</span>
+            <span className="text-xs">Guías</span>
           </button>
-
           <div className="relative">
-            <button
-              ref={moreToolsRef}
-              onClick={() => setShowMoreToolsDropdown(!showMoreToolsDropdown)}
-              className="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors text-sm group"
-              title="Más Herramientas"
-            >
-              <MoreHorizontal size={24} className="group-hover:scale-110 transition-transform" />
-              <span>Más</span>
+            <button ref={moreToolsRef} onClick={() => setShowMoreToolsDropdown(!showMoreToolsDropdown)} className="flex flex-col items-center text-gray-700 hover:text-blue-600" title="Más Herramientas">
+              <MoreHorizontal size={24} />
+              <span className="text-xs">Más</span>
             </button>
             {showMoreToolsDropdown && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-30 py-2 w-48">
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-20 py-1 w-48 text-sm">
                 <button
                   onClick={() => { alert('Funcionalidad "Compartir" (no implementada)'); setShowMoreToolsDropdown(false); }}
-                  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm"
-                  title="Compartir Imagen"
+                  className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                 >
                   Compartir
                 </button>
                 <div className="border-t border-gray-200 my-1"></div>
                 <button
                   onClick={handleCopyStyle}
-                  className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm ${!isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Copiar Estilo del Elemento Seleccionado"
+                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${!isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!isAnyEditableElementSelected}
                 >
                   <Copy size={16} /> Copiar Estilo
                 </button>
                 <button
                   onClick={handlePasteStyle}
-                  className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm ${!copiedStyle || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Pegar Estilo al Elemento Seleccionado"
+                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${!copiedStyle || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!copiedStyle || !isAnyEditableElementSelected}
                 >
                   <PaintBucket size={16} /> Pegar Estilo
                 </button>
                 <div className="border-t border-gray-200 my-1"></div>
-                <span className="block px-4 py-2 text-xs text-gray-500 font-semibold uppercase">Orden de Capas</span>
+                <span className="block px-3 py-1 text-xs text-gray-500 font-semibold uppercase">Orden de Capas</span>
                 <button
                   onClick={() => handleZOrder('up')}
-                  className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Mover Adelante"
+                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <ChevronUp size={16} /> Adelante
                 </button>
                 <button
                   onClick={() => handleZOrder('down')}
-                  className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Mover Atrás"
+                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <ChevronDown size={16} /> Atrás
                 </button>
                 <button
                   onClick={() => handleZOrder('top')}
-                  className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Mover al Frente"
+                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <BringToFront size={16} /> Al Frente
                 </button>
                 <button
                   onClick={() => handleZOrder('bottom')}
-                  className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 text-sm ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Mover al Fondo"
+                  className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${selectedCanvasElement === 'background' || !isAnyEditableElementSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={selectedCanvasElement === 'background' || !isAnyEditableElementSelected}
                 >
                   <SendToBack size={16} /> Al Fondo
@@ -1851,27 +1790,19 @@ export default function EditorPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleGetProClick}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2 text-sm transition duration-300 ease-in-out transform hover:scale-105 shadow-md"
-            title="Obtener Pixafree PRO"
-          >
-            Obtener PRO
-          </button>
-
-          <button
-            onClick={handleDownloadTemplate}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2 text-sm transition duration-300 ease-in-out transform hover:scale-105 shadow-md"
-            title="Descargar Imagen Final"
-          >
-            <Download size={18} /> Descargar
-          </button>
-        </div>
+        <button
+          onClick={handleDownloadTemplate}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md flex items-center"
+          title="Descargar Imagen Final"
+        >
+          <Download size={18} className="mr-2" /> Descargar
+        </button>
       </header>
 
-      <div className="flex flex-1 w-full overflow-hidden">
-        <div className="flex-grow flex items-center justify-center p-6 bg-gray-100 overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Canvas Area */}
+        <div className="flex-1 flex items-center justify-center p-4 bg-gray-200">
           <DynamicCanvasEditor
             productImageUrl={productImageUrl}
             onCanvasReady={setKonvaCanvas}
@@ -1900,7 +1831,6 @@ export default function EditorPage() {
             setProductScale={setProductScale}
             setHasProductBeenScaledManually={setHasProductBeenScaledManually}
 
-            selectedPresetBackgroundUrl={selectedPresetBackgroundUrl}
             backgroundOpacity={backgroundOpacity}
             backgroundBlurRadius={backgroundBlurRadius}
             backgroundShadowEnabled={backgroundShadowEnabled}
@@ -1913,6 +1843,7 @@ export default function EditorPage() {
             backgroundFlipX={backgroundFlipX}
             backgroundFlipY={backgroundFlipY}
             backgroundFilter={backgroundFilter}
+            selectedPresetBackgroundUrl={selectedPresetBackgroundUrl}
 
             textElements={textElements}
             selectedTextElementId={selectedTextElementId}
@@ -1942,9 +1873,10 @@ export default function EditorPage() {
           />
         </div>
 
-        <div className="w-80 bg-white p-4 border-l border-gray-200 flex flex-col gap-3 overflow-y-auto shadow-inner flex-shrink-0">
+        {/* Right Sidebar */}
+        <div className="w-80 bg-white p-4 overflow-y-auto shadow-inner">
           {rightSidebarView === 'backgrounds' ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col space-y-4">
               <h2 className="text-xl font-bold text-gray-800">Opciones de Fondo</h2>
 
               <CollapsibleSection
@@ -1953,17 +1885,17 @@ export default function EditorPage() {
                 setIsOpen={setIsGenerateSceneAIOpen}
                 icon={Sparkles}
               >
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col space-y-3">
                   <p className="text-sm text-gray-600">Describe la escena que quieres generar para tu producto.</p>
                   <textarea
                     value={scenePrompt}
                     onChange={(e) => setScenePrompt(e.target.value)}
                     placeholder="Ej: Un estudio de fotografía minimalista con luz suave"
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    className="border border-gray-300 rounded-md p-2 w-full"
                   />
                   <p className="text-sm text-gray-600">Opcional: Sube una imagen de referencia para que la IA la use como contexto.</p>
-                  <label htmlFor="aiReferenceImageUpload" className="cursor-pointer py-2 px-4 rounded-md text-sm font-semibold text-left hover:bg-gray-100 block bg-gray-100 text-center">
+                  <label htmlFor="aiReferenceImageUpload" className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-center">
                     {aiReferenceImageFile ? 'Cambiar Imagen de Referencia' : 'Subir Imagen de Referencia'}
                   </label>
                   <input
@@ -1975,9 +1907,9 @@ export default function EditorPage() {
                     ref={aiReferenceImageRef}
                   />
                   {aiReferenceImageUrl && (
-                    <div className="mt-2 text-center">
+                    <div className="text-center">
                       <p className="text-xs text-gray-500 mb-1">Imagen de referencia:</p>
-                      <img src={aiReferenceImageUrl} alt="AI Reference" className="max-w-full h-24 object-contain mx-auto rounded-md border border-gray-200" />
+                      <img src={aiReferenceImageUrl} alt="AI Reference" className="max-w-full h-24 object-contain mx-auto border border-gray-200 rounded-md" />
                       <button
                         onClick={() => { setAiReferenceImageFile(null); setAiReferenceImageUrl(null); if (aiReferenceImageRef.current) aiReferenceImageRef.current.value = ''; }}
                         className="mt-2 text-red-500 hover:text-red-700 text-xs"
@@ -1989,18 +1921,18 @@ export default function EditorPage() {
                   <button
                     onClick={handleGenerateSceneWithAI}
                     disabled={isGeneratingScene || (!scenePrompt && !aiReferenceImageFile)}
-                    className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md text-white font-semibold transition duration-200 ${
+                    className={`flex items-center justify-center w-full py-2 px-4 rounded-md text-white font-semibold ${
                       isGeneratingScene || (!scenePrompt && !aiReferenceImageFile) ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
                     {isGeneratingScene ? (
                       <>
-                        <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-solid rounded-full border-r-transparent"></span>
+                        <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-solid rounded-full border-r-transparent mr-2"></span>
                         Generando...
                       </>
                     ) : (
                       <>
-                        <Sparkles size={18} /> Generar Escena
+                        <Sparkles size={18} className="mr-2" /> Generar Escena
                       </>
                     )}
                   </button>
@@ -2008,7 +1940,7 @@ export default function EditorPage() {
               </CollapsibleSection>
 
               <CollapsibleSection title="Cargar Imagen de Fondo" isOpen={isCustomBackgroundUploadOpen} setIsOpen={setIsCustomBackgroundUploadOpen} icon={ImageIcon}>
-                <label htmlFor="uploadCustomBackground" className="cursor-pointer py-2 px-4 rounded-md text-sm font-semibold text-left hover:bg-gray-100 block bg-gray-100">
+                <label htmlFor="uploadCustomBackground" className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-center block">
                   Seleccionar Archivo
                 </label>
                 <input
@@ -2029,7 +1961,7 @@ export default function EditorPage() {
                   {allPresetBackgrounds.map((bg) => (
                     <div
                       key={bg.id}
-                      className={`relative w-full h-24 rounded-md overflow-hidden cursor-pointer group border transition-colors ${
+                      className={`relative w-full h-24 rounded-md overflow-hidden cursor-pointer border ${
                         bg.isPremium && !isUserPremium ? 'border-yellow-500 opacity-60' : 'border-gray-200 hover:border-blue-500'
                       }`}
                       onClick={() => handleSelectPresetBackground(bg)}
@@ -2040,8 +1972,8 @@ export default function EditorPage() {
                           Premium
                         </span>
                       )}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center transition-all">
-                        <Plus size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 flex items-center justify-center transition-all">
+                        <Plus size={24} className="text-white opacity-0 hover:opacity-100" />
                       </div>
                     </div>
                   ))}
@@ -2129,13 +2061,12 @@ export default function EditorPage() {
                   <br/>3. En la sección "Fondos Preestablecidos", deberás cargar las URLs y el estado `isPremium` de las imágenes desde tu API de medios al inicio de la aplicación.
                 </p>
               </CollapsibleSection>
-
             </div>
           ) : (
-            <>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Propiedades del Objeto</h2>
+            <div className="flex flex-col space-y-4">
+              <h2 className="text-xl font-bold text-gray-800">Propiedades del Objeto</h2>
 
-              <div className="flex items-center justify-between p-2 bg-yellow-100 rounded-md border border-yellow-200 mb-4">
+              <div className="flex items-center justify-between p-2 bg-yellow-100 rounded-md border border-yellow-200">
                 <span className="text-sm font-semibold text-yellow-800">Simular Usuario Premium:</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -2150,14 +2081,13 @@ export default function EditorPage() {
               </div>
 
               {!selectedCanvasElement && (
-                <div className="p-4 text-center text-gray-500">
+                <div className="p-4 text-center text-gray-500 border border-gray-300 rounded-md">
                   Haz clic en un elemento en el lienzo para editar sus propiedades.
                 </div>
               )}
 
               {isProductSelected && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades del Producto</h3>
+                <CollapsibleSection title="Propiedades del Producto" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
                   <div>
                     <label htmlFor="productOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(productOpacity * 100).toFixed(0)}%</label>
                     <input
@@ -2171,12 +2101,11 @@ export default function EditorPage() {
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                </>
+                </CollapsibleSection>
               )}
 
               {selectedCanvasElement === 'background' && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades del Fondo</h3>
+                <CollapsibleSection title="Propiedades del Fondo" isOpen={true} setIsOpen={() => {}} icon={Layout}>
                   <div>
                     <label htmlFor="backgroundOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(backgroundOpacity * 100).toFixed(0)}%</label>
                     <input
@@ -2190,333 +2119,334 @@ export default function EditorPage() {
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                </>
+                </CollapsibleSection>
               )}
 
               {isTextSelected && currentTextElement && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades del Texto</h3>
-                  <div>
-                    <label htmlFor="textContent" className="block text-sm font-medium text-gray-700">Contenido del Texto</label>
-                    <textarea
-                      id="textContent"
-                      value={currentTextElement.text}
-                      onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { text: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                      rows={3}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="fontSize" className="block text-sm font-medium text-gray-700">Tamaño de Fuente: {currentTextElement.fontSize.toFixed(0)}</label>
-                    <input
-                      id="fontSize"
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={currentTextElement.fontSize}
-                      onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontSize: Number(e.target.value) })}
-                      onMouseUp={onTransformEndCommit}
-                      onTouchEnd={onTransformEndCommit}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="textColor" className="block text-sm font-medium text-gray-700">Color de Texto</label>
-                    <input
-                      id="textColor"
-                      type="color"
-                      value={currentTextElement.fill}
-                      onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fill: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="w-full h-10 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="fontFamily" className="block text-sm font-medium text-gray-700">Familia de Fuente</label>
-                    <select
-                      id="fontFamily"
-                      value={currentTextElement.fontFamily}
-                      onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontFamily: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                    >
-                      <option value="Arial">Arial</option>
-                      <option value="Verdana">Verdana</option>
-                      <option value="Helvetica">Helvetica</option>
-                      <option value="Times New Roman">Times New Roman</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="Courier New">Courier New</option>
-                      <option value="monospace">Monospace</option>
-                      <option value="Impact">Impact</option>
-                      <option value="Trebuchet MS">Trebuchet MS</option>
-                      <option value="Montserrat">Montserrat</option>
-                      <option value="Open Sans">Open Sans</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Bebas Neue">Bebas Neue</option>
-                    </select>
-                  </div>
-                  <div className="col-span-1">
-                    <label htmlFor="textAlign" className="block text-sm font-medium text-gray-700">Alineación de Texto</label>
-                    <div className="flex gap-2 mt-1">
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'left' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'left' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        Izquierda
-                      </button>
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'center' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'center' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        Centro
-                      </button>
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'right' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        Derecha
-                      </button>
-                    </div>
-                  </div>
-                  <div className="col-span-1">
-                    <label htmlFor="textDecoration" className="block text-sm font-medium text-gray-700">Estilo de Texto</label>
-                    <div className="flex gap-2 mt-1">
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'bold' ? 'none' : 'bold' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm font-bold ${currentTextElement.textDecoration === 'bold' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        B
-                      </button>
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { fontStyle: currentTextElement.fontStyle === 'italic' ? 'normal' : 'italic' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm italic ${currentTextElement.fontStyle === 'italic' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        I
-                      </button>
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'underline' ? 'none' : 'underline' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm underline ${currentTextElement.textDecoration === 'underline' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        U
-                      </button>
-                      <button
-                        onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'line-through' ? 'none' : 'line-through' }); onTransformEndCommit(); }}
-                        className={`px-3 py-1 rounded-md text-sm line-through ${currentTextElement.textDecoration === 'line-through' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                      >
-                        S
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="textStrokeColor" className="block text-sm font-medium text-gray-700">Color de Contorno</label>
-                    <input
-                      id="textStrokeColor"
-                      type="color"
-                      value={currentTextElement.stroke || '#000000'}
-                      onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { stroke: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="w-full h-10 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="textStrokeWidth" className="block text-sm font-medium text-gray-700">Grosor de Contorno: {currentTextElement.strokeWidth?.toFixed(0) || 0}</label>
-                    <input
-                      id="textStrokeWidth"
-                      type="range"
-                      min="0"
-                      max="5"
-                      step="0.1"
-                      value={currentTextElement.strokeWidth || 0}
-                      onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { strokeWidth: Number(e.target.value) })}
-                      onMouseUp={onTransformEndCommit}
-                      onTouchEnd={onTransformEndCommit}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                </>
-              )}
-
-              {isShapeSelected && currentShapeElement && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades de la Figura</h3>
-                  {currentShapeElement.type === 'rect' && (
-                    <>
-                      <div>
-                        <label htmlFor="shapeWidth" className="block text-sm font-medium text-gray-700">Ancho: {currentShapeElement.width?.toFixed(0)}</label>
-                        <input
-                          id="shapeWidth"
-                          type="range"
-                          min="10"
-                          max={CANVAS_SIZE / 2}
-                          value={currentShapeElement.width}
-                          onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { width: Number(e.target.value) })}
-                          onMouseUp={onTransformEndCommit}
-                          onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="shapeHeight" className="block text-sm font-medium text-gray-700">Alto: {currentShapeElement.height?.toFixed(0)}</label>
-                        <input
-                          id="shapeHeight"
-                          type="range"
-                          min="10"
-                          max={CANVAS_SIZE / 2}
-                          value={currentShapeElement.height}
-                          onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { height: Number(e.target.value) })}
-                          onMouseUp={onTransformEndCommit}
-                          onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
-                    </>
-                  )}
-                  {currentShapeElement.type === 'circle' && (
+                <CollapsibleSection title="Propiedades del Texto" isOpen={true} setIsOpen={() => {}} icon={TextCursorInput}>
+                  <div className="space-y-3">
                     <div>
-                      <label htmlFor="shapeRadius" className="block text-sm font-medium text-gray-700">Radio: {currentShapeElement.radius?.toFixed(0)}</label>
+                      <label htmlFor="textContent" className="block text-sm font-medium text-gray-700">Contenido del Texto</label>
+                      <textarea
+                        id="textContent"
+                        value={currentTextElement.text}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { text: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="fontSize" className="block text-sm font-medium text-gray-700">Tamaño de Fuente: {currentTextElement.fontSize.toFixed(0)}</label>
                       <input
-                        id="shapeRadius"
+                        id="fontSize"
                         type="range"
-                        min="5"
-                        max={CANVAS_SIZE / 4}
-                        value={currentShapeElement.radius}
-                        onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { radius: Number(e.target.value) })}
+                        min="10"
+                        max="100"
+                        value={currentTextElement.fontSize}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontSize: Number(e.target.value) })}
                         onMouseUp={onTransformEndCommit}
                         onTouchEnd={onTransformEndCommit}
                         className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
-                  )}
-                  {currentShapeElement.type !== 'line' && (
                     <div>
-                      <label htmlFor="shapeFillColor" className="block text-sm font-medium text-gray-700">Color de Relleno</label>
+                      <label htmlFor="textColor" className="block text-sm font-medium text-gray-700">Color de Texto</label>
                       <input
-                        id="shapeFillColor"
+                        id="textColor"
                         type="color"
-                        value={currentShapeElement.fill}
-                        onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { fill: e.target.value })}
+                        value={currentTextElement.fill}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fill: e.target.value })}
                         onBlur={onTransformEndCommit}
                         className="w-full h-10 rounded-lg cursor-pointer"
                       />
                     </div>
-                  )}
-                  <div>
-                    <label htmlFor="shapeStrokeColor" className="block text-sm font-medium text-gray-700">Color de Borde</label>
-                    <input
-                      id="shapeStrokeColor"
-                      type="color"
-                      value={currentShapeElement.stroke}
-                      onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { stroke: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="w-full h-10 rounded-lg cursor-pointer"
-                    />
+                    <div>
+                      <label htmlFor="fontFamily" className="block text-sm font-medium text-gray-700">Familia de Fuente</label>
+                      <select
+                        id="fontFamily"
+                        value={currentTextElement.fontFamily}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { fontFamily: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="monospace">Monospace</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Trebuchet MS">Trebuchet MS</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="textAlign" className="block text-sm font-medium text-gray-700">Alineación de Texto</label>
+                      <div className="flex space-x-2 mt-1">
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'left' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'left' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          Izquierda
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'center' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'center' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          Centro
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { align: 'right' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm ${currentTextElement.align === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          Derecha
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="textDecoration" className="block text-sm font-medium text-gray-700">Estilo de Texto</label>
+                      <div className="flex space-x-2 mt-1">
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'bold' ? 'none' : 'bold' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm font-bold ${currentTextElement.textDecoration === 'bold' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          B
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { fontStyle: currentTextElement.fontStyle === 'italic' ? 'normal' : 'italic' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm italic ${currentTextElement.fontStyle === 'italic' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          I
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'underline' ? 'none' : 'underline' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm underline ${currentTextElement.textDecoration === 'underline' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          U
+                        </button>
+                        <button
+                          onClick={() => { handleUpdateTextElement(selectedTextElementId!, { textDecoration: currentTextElement.textDecoration === 'line-through' ? 'none' : 'line-through' }); onTransformEndCommit(); }}
+                          className={`px-3 py-1 rounded-md text-sm line-through ${currentTextElement.textDecoration === 'line-through' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          S
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="textStrokeColor" className="block text-sm font-medium text-gray-700">Color de Contorno</label>
+                      <input
+                        id="textStrokeColor"
+                        type="color"
+                        value={currentTextElement.stroke || '#000000'}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { stroke: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="w-full h-10 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="textStrokeWidth" className="block text-sm font-medium text-gray-700">Grosor de Contorno: {currentTextElement.strokeWidth?.toFixed(0) || 0}</label>
+                      <input
+                        id="textStrokeWidth"
+                        type="range"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={currentTextElement.strokeWidth || 0}
+                        onChange={(e) => handleUpdateTextElement(selectedTextElementId!, { strokeWidth: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label htmlFor="shapeStrokeWidth" className="block text-sm font-medium text-gray-700">Grosor de Borde: {currentShapeElement.strokeWidth.toFixed(0)}</label>
-                    <input
-                      id="shapeStrokeWidth"
-                      type="range"
-                      min="0"
-                      max="10"
-                      value={currentShapeElement.strokeWidth}
-                      onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { strokeWidth: Number(e.target.value) })}
-                      onMouseUp={onTransformEndCommit}
-                      onTouchEnd={onTransformEndCommit}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                    />
+                </CollapsibleSection>
+              )}
+
+              {isShapeSelected && currentShapeElement && (
+                <CollapsibleSection title="Propiedades de la Figura" isOpen={true} setIsOpen={() => {}} icon={PenTool}>
+                  <div className="space-y-3">
+                    {currentShapeElement.type === 'rect' && (
+                      <>
+                        <div>
+                          <label htmlFor="shapeWidth" className="block text-sm font-medium text-gray-700">Ancho: {currentShapeElement.width?.toFixed(0)}</label>
+                          <input
+                            id="shapeWidth"
+                            type="range"
+                            min="10"
+                            max={CANVAS_SIZE / 2}
+                            value={currentShapeElement.width}
+                            onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { width: Number(e.target.value) })}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="shapeHeight" className="block text-sm font-medium text-gray-700">Alto: {currentShapeElement.height?.toFixed(0)}</label>
+                          <input
+                            id="shapeHeight"
+                            type="range"
+                            min="10"
+                            max={CANVAS_SIZE / 2}
+                            value={currentShapeElement.height}
+                            onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { height: Number(e.target.value) })}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {currentShapeElement.type === 'circle' && (
+                      <div>
+                        <label htmlFor="shapeRadius" className="block text-sm font-medium text-gray-700">Radio: {currentShapeElement.radius?.toFixed(0)}</label>
+                        <input
+                          id="shapeRadius"
+                          type="range"
+                          min="5"
+                          max={CANVAS_SIZE / 4}
+                          value={currentShapeElement.radius}
+                          onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { radius: Number(e.target.value) })}
+                          onMouseUp={onTransformEndCommit}
+                          onTouchEnd={onTransformEndCommit}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    {currentShapeElement.type !== 'line' && (
+                      <div>
+                        <label htmlFor="shapeFillColor" className="block text-sm font-medium text-gray-700">Color de Relleno</label>
+                        <input
+                          id="shapeFillColor"
+                          type="color"
+                          value={currentShapeElement.fill}
+                          onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { fill: e.target.value })}
+                          onBlur={onTransformEndCommit}
+                          className="w-full h-10 rounded-lg cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label htmlFor="shapeStrokeColor" className="block text-sm font-medium text-gray-700">Color de Borde</label>
+                      <input
+                        id="shapeStrokeColor"
+                        type="color"
+                        value={currentShapeElement.stroke}
+                        onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { stroke: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="w-full h-10 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="shapeStrokeWidth" className="block text-sm font-medium text-gray-700">Grosor de Borde: {currentShapeElement.strokeWidth.toFixed(0)}</label>
+                      <input
+                        id="shapeStrokeWidth"
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={currentShapeElement.strokeWidth}
+                        onChange={(e) => handleUpdateShapeElement(selectedShapeElementId!, { strokeWidth: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
                   </div>
-                </>
+                </CollapsibleSection>
               )}
 
               {isDateSelected && currentDateElement && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades de la Fecha</h3>
-                  <div>
-                    <label htmlFor="dateContent" className="block text-sm font-medium text-gray-700">Contenido de la Fecha</label>
-                    <input
-                      id="dateContent"
-                      type="text"
-                      value={currentDateElement.text}
-                      onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                    />
+                <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={() => {}} icon={Layout}>
+                  <div className="space-y-3">
+                    <div>
+                      <label htmlFor="dateContent" className="block text-sm font-medium text-gray-700">Contenido de la Fecha</label>
+                      <input
+                        id="dateContent"
+                        type="text"
+                        value={currentDateElement.text}
+                        onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dateFormat" className="block text-sm font-medium text-gray-700">Formato de Fecha</label>
+                      <select
+                        id="dateFormat"
+                        value={currentDateElement.format}
+                        onChange={(e) => {
+                          const newFormat = e.target.value;
+                          const today = new Date();
+                          handleUpdateDateElement({ format: newFormat, text: formatDate(today, newFormat) });
+                        }}
+                        onBlur={onTransformEndCommit}
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                      >
+                        <option value="DD/MM/YYYY">DD/MM/YYYY (ej. 12/07/2025)</option>
+                        <option value="MMMM DD, YYYY">MMMM DD, YYYY (ej. Julio 12, 2025)</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD (ej. 2025-07-12)</option>
+                        <option value="DD MMMM YYYY">DD MMMM YYYY (ej. 12 Julio 2025)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="dateFontSize" className="block text-sm font-medium text-gray-700">Tamaño de Fuente: {currentDateElement.fontSize.toFixed(0)}</label>
+                      <input
+                        id="dateFontSize"
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={currentDateElement.fontSize}
+                        onChange={(e) => handleUpdateDateElement({ fontSize: Number(e.target.value) })}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dateTextColor" className="block text-sm font-medium text-gray-700">Color de Texto</label>
+                      <input
+                        id="dateTextColor"
+                        type="color"
+                        value={currentDateElement.fill}
+                        onChange={(e) => handleUpdateDateElement({ fill: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="w-full h-10 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dateFontFamily" className="block text-sm font-medium text-gray-700">Familia de Fuente</label>
+                      <select
+                        id="dateFontFamily"
+                        value={currentDateElement.fontFamily}
+                        onChange={(e) => handleUpdateDateElement({ fontFamily: e.target.value })}
+                        onBlur={onTransformEndCommit}
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="monospace">Monospace</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Trebuchet MS">Trebuchet MS</option>
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label htmlFor="dateFormat" className="block text-sm font-medium text-gray-700">Formato de Fecha</label>
-                    <select
-                      id="dateFormat"
-                      value={currentDateElement.format}
-                      onChange={(e) => {
-                        const newFormat = e.target.value;
-                        const today = new Date();
-                        handleUpdateDateElement({ format: newFormat, text: formatDate(today, newFormat) });
-                      }}
-                      onBlur={onTransformEndCommit}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                    >
-                      <option value="DD/MM/YYYY">DD/MM/YYYY (ej. 12/07/2025)</option>
-                      <option value="MMMM DD, YYYY">MMMM DD, YYYY (ej. Julio 12, 2025)</option>
-                      <option value="YYYY-MM-DD">YYYY-MM-DD (ej. 2025-07-12)</option>
-                      <option value="DD MMMM YYYY">DD MMMM YYYY (ej. 12 Julio 2025)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="dateFontSize" className="block text-sm font-medium text-gray-700">Tamaño de Fuente: {currentDateElement.fontSize.toFixed(0)}</label>
-                    <input
-                      id="dateFontSize"
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={currentDateElement.fontSize}
-                      onChange={(e) => handleUpdateDateElement({ fontSize: Number(e.target.value) })}
-                      onMouseUp={onTransformEndCommit}
-                      onTouchEnd={onTransformEndCommit}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="dateTextColor" className="block text-sm font-medium text-gray-700">Color de Texto</label>
-                    <input
-                      id="dateTextColor"
-                      type="color"
-                      value={currentDateElement.fill}
-                      onChange={(e) => handleUpdateDateElement({ fill: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="w-full h-10 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="dateFontFamily" className="block text-sm font-medium text-gray-700">Familia de Fuente</label>
-                    <select
-                      id="dateFontFamily"
-                      value={currentDateElement.fontFamily}
-                      onChange={(e) => handleUpdateDateElement({ fontFamily: e.target.value })}
-                      onBlur={onTransformEndCommit}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                    >
-                      <option value="Arial">Arial</option>
-                      <option value="Verdana">Verdana</option>
-                      <option value="Helvetica">Helvetica</option>
-                      <option value="Times New Roman">Times New Roman</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="Courier New">Courier New</option>
-                      <option value="monospace">Monospace</option>
-                      <option value="Impact">Impact</option>
-                      <option value="Trebuchet MS">Trebuchet MS</option>
-                      <option value="Montserrat">Montserrat</option>
-                      <option value="Open Sans">Open Sans</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Bebas Neue">Bebas Neue</option>
-                    </select>
-                  </div>
-                </>
+                </CollapsibleSection>
               )}
 
               {isImageSelected && currentImageElement && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Propiedades de la Imagen</h3>
+                <CollapsibleSection title="Propiedades de la Imagen" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
                   <div>
                     <label htmlFor="imageOpacity" className="block text-sm font-medium text-gray-700">Opacidad: {(currentImageElement.opacity * 100).toFixed(0)}%</label>
                     <input
@@ -2532,167 +2462,168 @@ export default function EditorPage() {
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                </>
+                </CollapsibleSection>
               )}
 
               {isAnyEditableElementSelected && (
-                <>
-                  <h3 className="text-lg font-semibold text-gray-700 mt-4 mb-2">Ajustes Generales</h3>
-                  <div>
-                    <label htmlFor="blurRadius" className="block text-sm font-medium text-gray-700">Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
-                    <input
-                      id="blurRadius"
-                      type="range"
-                      min="0"
-                      max="20"
-                      value={currentElementProps.blurRadius}
-                      onChange={(e) => { currentElementProps.setBlurRadius(Number(e.target.value)); onTransformEndCommit(); }}
-                      onMouseUp={onTransformEndCommit}
-                      onTouchEnd={onTransformEndCommit}
-                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm font-medium text-gray-700">Sombra</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                <CollapsibleSection title="Ajustes Generales" isOpen={true} setIsOpen={() => {}} icon={Settings}>
+                  <div className="space-y-3">
+                    <div>
+                      <label htmlFor="blurRadius" className="block text-sm font-medium text-gray-700">Desenfoque: {currentElementProps.blurRadius.toFixed(0)}px</label>
                       <input
-                        type="checkbox"
-                        value=""
-                        className="sr-only peer"
-                        checked={currentElementProps.shadowEnabled}
-                        onChange={handleToggleShadow}
+                        id="blurRadius"
+                        type="range"
+                        min="0"
+                        max="20"
+                        value={currentElementProps.blurRadius}
+                        onChange={(e) => { currentElementProps.setBlurRadius(Number(e.target.value)); onTransformEndCommit(); }}
+                        onMouseUp={onTransformEndCommit}
+                        onTouchEnd={onTransformEndCommit}
+                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  {currentElementProps.shadowEnabled && (
-                    <div className="flex flex-col gap-2 p-2 bg-gray-100 rounded-md mt-2">
-                      <div>
-                        <label htmlFor="shadowColor" className="block text-sm font-medium text-gray-700">Color de Sombra</label>
-                        <input
-                          id="shadowColor"
-                          type="color"
-                          value={currentElementProps.shadowColor}
-                          onChange={(e) => { currentElementProps.setShadowColor(e.target.value); onTransformEndCommit(); }}
-                          onBlur={onTransformEndCommit}
-                          className="w-full h-10 rounded-lg cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="shadowBlur" className="block text-sm font-medium text-gray-700">Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
-                        <input
-                          id="shadowBlur"
-                          type="range"
-                          min="0"
-                          max="20"
-                          value={currentElementProps.shadowBlur}
-                          onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
-                          onMouseUp={onTransformEndCommit}
-                          onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="shadowOffsetX" className="block text-sm font-medium text-gray-700">Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
-                        <input
-                          id="shadowOffsetX"
-                          type="range"
-                          min="-20"
-                          max="20"
-                          value={currentElementProps.shadowOffsetX}
-                          onChange={(e) => { currentElementProps.setShadowOffsetX(Number(e.target.value)); onTransformEndCommit(); }}
-                          onMouseUp={onTransformEndCommit}
-                          onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="shadowOffsetY" className="block text-sm font-medium text-gray-700">Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
-                        <input
-                          id="shadowOffsetY"
-                          type="range"
-                          min="-20"
-                          max="20"
-                          value={currentElementProps.shadowOffsetY}
-                          onChange={(e) => { currentElementProps.setShadowOffsetY(Number(e.target.value)); onTransformEndCommit(); }}
-                          onMouseUp={onTransformEndCommit}
-                          onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="shadowOpacity" className="block text-sm font-medium text-gray-700">Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
-                        <input
-                          id="shadowOpacity"
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={currentElementProps.shadowOpacity}
-                          onChange={(e) => { currentElementProps.setShadowOpacity(Number(e.target.value)); onTransformEndCommit(); }}
-                          onMouseUp={onTransformEndCommit}
-                          onTouchEnd={onTransformEndCommit}
-                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm font-medium text-gray-700">Reflejo</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        value=""
-                        className="sr-only peer"
-                        checked={currentElementProps.reflectionEnabled}
-                        onChange={handleToggleReflection}
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Sombra</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          value=""
+                          className="sr-only peer"
+                          checked={currentElementProps.shadowEnabled}
+                          onChange={handleToggleShadow}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                    {currentElementProps.shadowEnabled && (
+                      <div className="flex flex-col space-y-2 p-2 bg-gray-100 rounded-md border border-gray-200">
+                        <div>
+                          <label htmlFor="shadowColor" className="block text-sm font-medium text-gray-700">Color de Sombra</label>
+                          <input
+                            id="shadowColor"
+                            type="color"
+                            value={currentElementProps.shadowColor}
+                            onChange={(e) => { currentElementProps.setShadowColor(e.target.value); onTransformEndCommit(); }}
+                            onBlur={onTransformEndCommit}
+                            className="w-full h-10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="shadowBlur" className="block text-sm font-medium text-gray-700">Desenfoque de Sombra: {currentElementProps.shadowBlur.toFixed(0)}</label>
+                          <input
+                            id="shadowBlur"
+                            type="range"
+                            min="0"
+                            max="20"
+                            value={currentElementProps.shadowBlur}
+                            onChange={(e) => { currentElementProps.setShadowBlur(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="shadowOffsetX" className="block text-sm font-medium text-gray-700">Desplazamiento X: {currentElementProps.shadowOffsetX.toFixed(0)}</label>
+                          <input
+                            id="shadowOffsetX"
+                            type="range"
+                            min="-20"
+                            max="20"
+                            value={currentElementProps.shadowOffsetX}
+                            onChange={(e) => { currentElementProps.setShadowOffsetX(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="shadowOffsetY" className="block text-sm font-medium text-gray-700">Desplazamiento Y: {currentElementProps.shadowOffsetY.toFixed(0)}</label>
+                          <input
+                            id="shadowOffsetY"
+                            type="range"
+                            min="-20"
+                            max="20"
+                            value={currentElementProps.shadowOffsetY}
+                            onChange={(e) => { currentElementProps.setShadowOffsetY(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="shadowOpacity" className="block text-sm font-medium text-gray-700">Opacidad de Sombra: {(currentElementProps.shadowOpacity * 100).toFixed(0)}%</label>
+                          <input
+                            id="shadowOpacity"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={currentElementProps.shadowOpacity}
+                            onChange={(e) => { currentElementProps.setShadowOpacity(Number(e.target.value)); onTransformEndCommit(); }}
+                            onMouseUp={onTransformEndCommit}
+                            onTouchEnd={onTransformEndCommit}
+                            className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    )}
 
-                  <h4 className="text-md font-semibold text-gray-700 mt-4 mb-2">Voltear</h4>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleFlip('x')}
-                      className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300 transition-colors"
-                    >
-                      Voltear Horizontal
-                    </button>
-                    <button
-                      onClick={() => handleFlip('y')}
-                      className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300 transition-colors"
-                    >
-                      Voltear Vertical
-                    </button>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Reflejo</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          value=""
+                          className="sr-only peer"
+                          checked={currentElementProps.reflectionEnabled}
+                          onChange={handleToggleReflection}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
 
-                  <h4 className="text-md font-semibold text-gray-700 mt-4 mb-2">Filtros</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => handleApplyFilter('none')}
-                      className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'none' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      Ninguno
-                    </button>
-                    <button
-                      onClick={() => handleApplyFilter('grayscale')}
-                      className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'grayscale' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      Escala de Grises
-                    </button>
-                    <button
-                      onClick={() => handleApplyFilter('sepia')}
-                      className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'sepia' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      Sepia
-                    </button>
+                    <h4 className="text-md font-semibold text-gray-700 mt-4">Voltear</h4>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleFlip('x')}
+                        className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300"
+                      >
+                        Voltear Horizontal
+                      </button>
+                      <button
+                        onClick={() => handleFlip('y')}
+                        className="flex-1 py-2 px-4 rounded-md text-sm font-semibold bg-gray-200 hover:bg-gray-300"
+                      >
+                        Voltear Vertical
+                      </button>
+                    </div>
+
+                    <h4 className="text-md font-semibold text-gray-700 mt-4">Filtros</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleApplyFilter('none')}
+                        className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'none' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                      >
+                        Ninguno
+                      </button>
+                      <button
+                        onClick={() => handleApplyFilter('grayscale')}
+                        className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'grayscale' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                      >
+                        Escala de Grises
+                      </button>
+                      <button
+                        onClick={() => handleApplyFilter('sepia')}
+                        className={`py-2 px-4 rounded-md text-sm font-semibold ${currentElementProps.filter === 'sepia' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                      >
+                        Sepia
+                      </button>
+                    </div>
                   </div>
-                </>
+                </CollapsibleSection>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -2701,22 +2632,22 @@ export default function EditorPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
             <h3 className="text-lg font-bold mb-4">¿Cómo quieres usar esta imagen?</h3>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col space-y-3">
               <button
                 onClick={() => handleSetAsProduct(tempUploadedFile)}
-                className="bg-blue-600 text-white py-2 px-4 rounded-md text-base font-semibold hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700"
               >
                 Establecer como Imagen de Producto
               </button>
               <button
                 onClick={() => handleAddImageAsElement(tempUploadedFile)}
-                className="bg-green-600 text-white py-2 px-4 rounded-md text-base font-semibold hover:bg-green-700 transition-colors"
+                className="bg-green-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-700"
               >
                 Añadir como Elemento en el Lienzo
               </button>
               <button
                 onClick={() => { setShowImageUploadTypeModal(false); setTempUploadedFile(null); }}
-                className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md text-base font-semibold hover:bg-gray-300 transition-colors"
+                className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md font-semibold hover:bg-gray-300"
               >
                 Cancelar
               </button>
