@@ -149,14 +149,14 @@ function Sidebar({
   variant?: 'sidebar' | 'floating' | 'inset';
   collapsible?: 'offcanvas' | 'icon' | 'none';
 }) {
-  const { isMobile, state, openMobile, setOpenMobile, open } = useSidebar(); // Añadir 'open' aquí
+  const { isMobile, state, openMobile, setOpenMobile, open } = useSidebar();
 
   if (collapsible === 'none') {
     return (
       <div
         data-slot="sidebar"
         className={cn(
-          'bg-sidebar text-sidebar-foreground flex h-full w-[var(--sidebar-width)] flex-col', // Usar var() para el ancho
+          'bg-sidebar text-sidebar-foreground flex h-full w-[var(--sidebar-width)] flex-col',
           className,
         )}
         {...props}
@@ -173,7 +173,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width-mobile)] p-0 [&>button]:hidden" // Usar var() para ancho móvil
+          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width-mobile)] p-0 [&>button]:hidden"
           style={
             {
               '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
@@ -191,12 +191,11 @@ function Sidebar({
     );
   }
 
-  // --- MODIFICACIONES PRINCIPALES AQUÍ ---
   return (
     <div
       className="group peer text-sidebar-foreground hidden md:block"
       data-state={state}
-      data-collapsible={collapsible} // Usar directamente 'collapsible' para el atributo data-
+      data-collapsible={collapsible}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
@@ -205,9 +204,7 @@ function Sidebar({
       <div
         className={cn(
           'relative bg-transparent transition-[width] duration-200 ease-snappy',
-          // Ancho cuando está expandido
-          open ? 'w-[var(--sidebar-width)]' : 'w-[var(--sidebar-width-icon)]', // Controlar el ancho con 'open'
-          // Ajustes para offcanvas (la barra lateral no ocupa espacio en el flujo)
+          open ? 'w-[var(--sidebar-width)]' : 'w-[var(--sidebar-width-icon)]',
           collapsible === 'offcanvas' && 'w-0',
           className,
         )}
@@ -215,16 +212,14 @@ function Sidebar({
       {/* Este div es la barra lateral FIJA que se superpone al espacio creado */}
       <div
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] duration-200 ease-snappy md:flex flex-col', // Añadir flex-col para que el contenido se apile
-          // Ancho de la barra lateral
-          open ? 'w-[var(--sidebar-width)]' : 'w-[var(--sidebar-width-icon)]', // Controlar el ancho con 'open'
+          'fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] duration-200 ease-snappy md:flex flex-col',
+          open ? 'w-[var(--sidebar-width)]' : 'w-[var(--sidebar-width-icon)]',
           side === 'left'
             ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
             : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
-          // Ajusta el padding para variantes flotantes e inset.
           variant === 'floating' || variant === 'inset'
             ? 'p-2'
-            : 'group-data-[side=left]:border-r group-data-[side=right]:border-l', // Mantener bordes para sidebar normal
+            : 'group-data-[side=left]:border-r group-data-[side=right]:border-l',
           className,
         )}
         {...props}
@@ -242,7 +237,7 @@ function Sidebar({
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar();
-  const { state, isMobile } = useSidebar(); // Obtener el estado para el tooltip
+  const { state, isMobile } = useSidebar();
 
   const button = (
     <Button
@@ -262,7 +257,6 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
     </Button>
   );
 
-  // Solo mostrar tooltip si la barra lateral está colapsada y no es móvil
   if (state === 'collapsed' && !isMobile) {
     return (
       <Tooltip>
@@ -304,29 +298,29 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
 }
 
 function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
-  const { state, isMobile, open } = useSidebar(); // Obtener el estado 'open' de la barra lateral
+  const { state, isMobile, open } = useSidebar();
 
+  // Eliminar la lógica de 'marginLeftClass' compleja y usar un enfoque más directo
+  // para el padding o margen del contenido principal.
+  // En lugar de ml-[var(--sidebar-width)], usaremos p-4 o p-8 para el contenido
+  // y dejaremos que el layout principal (en admin/layout.tsx) maneje el espacio del sidebar.
   return (
     <main
       data-slot="sidebar-inset"
       className={cn(
         'bg-background relative flex overflow-x-hidden flex-1 flex-col',
-        // Margen para el espacio de la barra lateral en escritorio
-        // Ajustar el margen basado en el estado 'open' de la barra lateral
-        isMobile ? 'ml-0' : (
-          open
-            ? 'md:ml-[var(--sidebar-width)]' // Expandido
-            : 'md:ml-[var(--sidebar-width-icon)]' // Colapsado a icono
-        ),
+        // Quitar los márgenes basados en var(--sidebar-width) de aquí.
+        // Estos márgenes serán manejados por el contenedor principal en admin/layout.tsx
+        // o por un padding general en el contenido.
+        'p-4 sm:p-6 md:p-8', // Añadir padding general para el contenido
         // Si la barra lateral es offcanvas, no hay margen (se superpone)
         'md:group-data-[collapsible=offcanvas]/sidebar-wrapper:ml-0',
-        // Ajustes para la variante 'inset'
+        // Ajustes para la variante 'inset' (que puede tener padding extra)
         'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm',
-        // Margen para inset + expandido
+        // Mantener la lógica de margen para la variante 'inset' si es necesario,
+        // pero el margen principal del layout lo manejará el padre.
         open && 'md:peer-data-[variant=inset]:ml-[calc(var(--sidebar-width)+theme(spacing.4))]',
-        // Margen para inset + icono
         !open && 'md:peer-data-[variant=inset]:group-data-[collapsible=icon]/sidebar-wrapper:ml-[calc(var(--sidebar-width-icon)+theme(spacing.4)+2px)]',
-        // Margen mínimo para inset offcanvas (si hay padding)
         'md:peer-data-[variant=inset]:group-data-[collapsible=offcanvas]/sidebar-wrapper:ml-2',
         className,
       )}
