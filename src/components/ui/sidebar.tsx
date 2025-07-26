@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = '16rem';
-const SIDEBAR_WIDTH_MOBILE = '18rem';
-const SIDEBAR_WIDTH_ICON = '3rem';
+const SIDEBAR_WIDTH = '16rem'; // Ancho de la barra lateral expandida
+const SIDEBAR_WIDTH_MOBILE = '18rem'; // Ancho de la barra lateral en móvil
+const SIDEBAR_WIDTH_ICON = '3rem'; // Ancho de la barra lateral colapsada (solo icono)
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
 
 type SidebarContext = {
@@ -65,8 +65,6 @@ function SidebarProvider({
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
@@ -78,18 +76,15 @@ function SidebarProvider({
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open],
   );
 
-  // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
   }, [isMobile, setOpen, setOpenMobile]);
 
-  // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
@@ -103,8 +98,6 @@ function SidebarProvider({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleSidebar]);
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? 'expanded' : 'collapsed';
 
   const contextValue = React.useMemo<SidebarContext>(
@@ -128,6 +121,7 @@ function SidebarProvider({
           {
             '--sidebar-width': SIDEBAR_WIDTH,
             '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
+            '--sidebar-width-mobile': SIDEBAR_WIDTH_MOBILE, // Añadir variable para móvil
             ...style,
           } as React.CSSProperties
         }
@@ -155,14 +149,14 @@ function Sidebar({
   variant?: 'sidebar' | 'floating' | 'inset';
   collapsible?: 'offcanvas' | 'icon' | 'none';
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, open } = useSidebar(); // Añadir 'open' aquí
 
   if (collapsible === 'none') {
     return (
       <div
         data-slot="sidebar"
         className={cn(
-          'bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col',
+          'bg-sidebar text-sidebar-foreground flex h-full w-[var(--sidebar-width)] flex-col', // Usar var() para el ancho
           className,
         )}
         {...props}
@@ -179,7 +173,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
+          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width-mobile)] p-0 [&>button]:hidden" // Usar var() para ancho móvil
           style={
             {
               '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
@@ -197,36 +191,40 @@ function Sidebar({
     );
   }
 
+  // --- MODIFICACIONES PRINCIPALES AQUÍ ---
   return (
     <div
       className="group peer text-sidebar-foreground hidden md:block"
       data-state={state}
-      data-collapsible={state === 'collapsed' ? collapsible : ''}
+      data-collapsible={collapsible} // Usar directamente 'collapsible' para el atributo data-
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
     >
-      {/* This is what handles the sidebar gap on desktop */}
+      {/* Este div CREA EL ESPACIO para la barra lateral en el flujo del documento */}
       <div
         className={cn(
-          'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-snappy',
-          'group-data-[collapsible=offcanvas]:w-0',
-          'group-data-[side=right]:rotate-180',
-          variant === 'floating' || variant === 'inset'
-            ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon)',
+          'relative bg-transparent transition-[width] duration-200 ease-snappy',
+          // Ancho cuando está expandido
+          open ? 'w-[var(--sidebar-width)]' : 'w-[var(--sidebar-width-icon)]', // Controlar el ancho con 'open'
+          // Ajustes para offcanvas (la barra lateral no ocupa espacio en el flujo)
+          collapsible === 'offcanvas' && 'w-0',
+          className,
         )}
       />
+      {/* Este div es la barra lateral FIJA que se superpone al espacio creado */}
       <div
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-snappy md:flex',
+          'fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] duration-200 ease-snappy md:flex flex-col', // Añadir flex-col para que el contenido se apile
+          // Ancho de la barra lateral
+          open ? 'w-[var(--sidebar-width)]' : 'w-[var(--sidebar-width-icon)]', // Controlar el ancho con 'open'
           side === 'left'
             ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
             : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
-          // Adjust the padding for floating and inset variants.
+          // Ajusta el padding para variantes flotantes e inset.
           variant === 'floating' || variant === 'inset'
-            ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
+            ? 'p-2'
+            : 'group-data-[side=left]:border-r group-data-[side=right]:border-l', // Mantener bordes para sidebar normal
           className,
         )}
         {...props}
@@ -244,8 +242,9 @@ function Sidebar({
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar();
+  const { state, isMobile } = useSidebar(); // Obtener el estado para el tooltip
 
-  return (
+  const button = (
     <Button
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
@@ -262,7 +261,22 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
+
+  // Solo mostrar tooltip si la barra lateral está colapsada y no es móvil
+  if (state === 'collapsed' && !isMobile) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right" align="center">
+          Expandir Sidebar (Ctrl+B)
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return button;
 }
+
 
 function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
   const { toggleSidebar } = useSidebar();
@@ -290,12 +304,30 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
 }
 
 function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
+  const { state, isMobile, open } = useSidebar(); // Obtener el estado 'open' de la barra lateral
+
   return (
     <main
       data-slot="sidebar-inset"
       className={cn(
         'bg-background relative flex overflow-x-hidden flex-1 flex-col',
-        'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2',
+        // Margen para el espacio de la barra lateral en escritorio
+        // Ajustar el margen basado en el estado 'open' de la barra lateral
+        isMobile ? 'ml-0' : (
+          open
+            ? 'md:ml-[var(--sidebar-width)]' // Expandido
+            : 'md:ml-[var(--sidebar-width-icon)]' // Colapsado a icono
+        ),
+        // Si la barra lateral es offcanvas, no hay margen (se superpone)
+        'md:group-data-[collapsible=offcanvas]/sidebar-wrapper:ml-0',
+        // Ajustes para la variante 'inset'
+        'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm',
+        // Margen para inset + expandido
+        open && 'md:peer-data-[variant=inset]:ml-[calc(var(--sidebar-width)+theme(spacing.4))]',
+        // Margen para inset + icono
+        !open && 'md:peer-data-[variant=inset]:group-data-[collapsible=icon]/sidebar-wrapper:ml-[calc(var(--sidebar-width-icon)+theme(spacing.4)+2px)]',
+        // Margen mínimo para inset offcanvas (si hay padding)
+        'md:peer-data-[variant=inset]:group-data-[collapsible=offcanvas]/sidebar-wrapper:ml-2',
         className,
       )}
       {...props}
@@ -601,7 +633,7 @@ function SidebarMenuSkeleton({
     >
       {showIcon && <Skeleton className="size-4 rounded-md" data-sidebar="menu-skeleton-icon" />}
       <Skeleton
-        className="h-4 max-w-(--skeleton-width) flex-1"
+        className="h-4 max-w-[var(--skeleton-width)] flex-1" // Usar var() para el ancho del esqueleto
         data-sidebar="menu-skeleton-text"
         style={
           {
