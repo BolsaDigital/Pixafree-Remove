@@ -11,13 +11,14 @@ const SettingsLayout = ({ children }: { children: React.ReactNode }) => {
           Configure your settings to get the most out of your experience.
         </p>
       </div>
-      {/* MODIFICACIONES AQUÍ: Reducir el gap y ajustar el ancho del contenido principal */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start"> {/* Reducido de gap-7/10 a gap-4/6 */}
-        <aside className="w-full lg:w-3xs"> {/* Mantener el ancho del aside si es el deseado */}
+      {/* MODIFICACIONES AQUÍ: Ajustar el layout para que el main ocupe el espacio restante */}
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start w-full"> {/* Añadir w-full al contenedor flex */}
+        <aside className="w-full lg:w-3xs flex-shrink-0"> {/* Añadir flex-shrink-0 para que el aside no se encoja */}
           <SettingsMenu />
         </aside>
-        {/* Eliminar max-w-xl para permitir que ocupe más espacio, o ajustarlo a un valor más grande si es necesario */}
-        <main className="flex-1 w-full lg:max-w-3xl"> {/* Cambiado de max-w-xl a lg:max-w-3xl o simplemente flex-1 w-full */}
+        {/* Asegurarse de que el main ocupe el espacio restante sin un max-width restrictivo */}
+        {/* Si lg:max-w-3xl sigue siendo muy restrictivo, puedes probar con lg:max-w-full o simplemente eliminarlo */}
+        <main className="flex-1 w-full"> {/* Eliminar lg:max-w-xl o lg:max-w-3xl para que ocupe todo el espacio disponible */}
           {children}
         </main>
       </div>
