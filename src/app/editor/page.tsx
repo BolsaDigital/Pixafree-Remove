@@ -186,7 +186,9 @@ const CANVAS_SIZE = 700;
 export default function EditorPage() {
   const searchParams = useSearchParams();
 
-  const [productImageUrl, setProductImageUrl] = useState<string>('https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload');
+  // MODIFICACIÓN CLAVE: Inicializar productImageUrl con el valor de la URL si existe
+  const initialProductImageUrl = searchParams.get('image_url') || 'https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload';
+  const [productImageUrl, setProductImageUrl] = useState<string>(initialProductImageUrl);
 
   const [selectedPresetBackgroundUrl, setSelectedPresetBackgroundUrl] = useState<string | undefined>(undefined);
 
@@ -450,7 +452,7 @@ export default function EditorPage() {
     setBackgroundBlurRadius(state.backgroundBlurRadius);
     setBackgroundShadowEnabled(state.backgroundShadowEnabled);
     setBackgroundShadowColor(state.backgroundShadowColor);
-    setBackgroundShadowBlur(state.backgroundShadowBlur);
+    setBackgroundShadowBlur(state.backgroundBlurRadius); // Corrected from state.backgroundShadowBlur
     setBackgroundShadowOffsetX(state.backgroundShadowOffsetX);
     setBackgroundShadowOffsetY(state.backgroundShadowOffsetY);
     setBackgroundShadowOpacity(state.backgroundShadowOpacity);
@@ -505,12 +507,20 @@ export default function EditorPage() {
       setTextElements, setShapeElements, setDateElement, setImageElements
   ]);
 
+  // MODIFICACIÓN CLAVE: Este useEffect ahora solo se encarga de la URL inicial
   useEffect(() => {
-    const urlFromParams = searchParams.get('imageUrl');
-    if (urlFromParams) {
-      setProductImageUrl(urlFromParams);
+    const imageUrlFromParam = searchParams.get('image_url'); // Usamos 'image_url' como se definió en BgRemoveBox
+    if (imageUrlFromParam && productImageUrl === 'https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload') {
+      // Solo actualiza si la URL actual es el placeholder
+      setProductImageUrl(imageUrlFromParam);
+      setProductX(CANVAS_SIZE / 2); // Centrar la imagen inicialmente
+      setProductY(CANVAS_SIZE / 2); // Centrar la imagen inicialmente
+      setProductScale(1); // Resetear escala
+      setProductRotation(0); // Resetear rotación
+      setHasProductBeenScaledManually(false); // Resetear bandera
+      setSelectedCanvasElement('product'); // Seleccionar el producto
     }
-  }, [searchParams]);
+  }, [searchParams, productImageUrl, CANVAS_SIZE]); // Dependencias actualizadas
 
   useEffect(() => {
     console.log('Product Image URL Effect Firing:', { productImageUrl, productScale, hasProductBeenScaledManually });
@@ -1481,7 +1491,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateShapeElement(selectedShapeElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { offsetY: val }), // Corrected from setShadowOffsetY
       setShadowOpacity: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateShapeElement(selectedShapeElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateShapeElement(selectedShapeElementId!, { filter: val }),
@@ -1498,7 +1508,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateDateElement({ shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateDateElement({ blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateDateElement({ shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateDateElement({ shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateDateElement({ offsetY: val }), // Corrected from setShadowOffsetY
       setShadowOpacity: (val: number) => handleUpdateDateElement({ shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateDateElement({ reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateDateElement({ filter: val }),
@@ -1513,9 +1523,9 @@ export default function EditorPage() {
       setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
-      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowBlur: val }),
+      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { offsetY: val }), // Corrected from setShadowOffsetY
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateImageElement(selectedImageElementId!, { filter: val }),
@@ -1592,6 +1602,8 @@ export default function EditorPage() {
         if (!response.ok) {
           throw new Error('Failed to delete preset from backend');
         }
+        const uploadedData = await response.json();
+        // Update adminUploadedBackgrounds with actual URL/ID from backend if needed
         setAdminUploadedBackgrounds((prev) => prev.filter((bg) => bg.id !== idToDelete));
         alert("Fondo preestablecido eliminado exitosamente!");
       } catch (error) {
