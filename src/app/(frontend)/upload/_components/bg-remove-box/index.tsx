@@ -17,8 +17,8 @@ import {
 
 import { cn } from '@/lib/utils';
 
-// RUTA DE IMPORTACIÓN CORREGIDA AQUÍ
-import { useRemoveBg } from '../_services/removebg-hooks'; 
+// RUTA DE IMPORTACIÓN CORREGIDA AHORA SÍ
+import { useRemoveBg } from '../../_services/removebg-hooks'; 
 
 const BgRemoveBox = () => {
   const {
