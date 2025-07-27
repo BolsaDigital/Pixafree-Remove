@@ -17,6 +17,8 @@ const UploadFiles = ({
   onCancel,
   isUploaded,
   error,
+  isCustomBackground, // Nuevo prop
+  isPremium,          // Nuevo prop
 }: {
   file: File;
   isUploading?: boolean;
@@ -24,6 +26,8 @@ const UploadFiles = ({
   onCancel?: () => void;
   isUploaded?: boolean;
   error?: string;
+  isCustomBackground?: boolean; // Nuevo prop
+  isPremium?: boolean;          // Nuevo prop
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -67,6 +71,17 @@ const UploadFiles = ({
             <p className="text-muted-foreground font-medium">{formatFileSize(file.size)}</p>
           )}
         </div>
+        {/* Mostrar badges si es un fondo personalizado */}
+        {isCustomBackground && (
+          <div className="flex gap-1 mt-1">
+            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+              Custom Background
+            </span>
+            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+              {isPremium ? 'Premium' : 'Free'}
+            </span>
+          </div>
+        )}
       </div>
       <div className="ml-auto flex items-center gap-2">
         {isUploading ? (
@@ -96,15 +111,72 @@ const UploadFiles = ({
 
 const UploadBox = () => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isCustomBackground, setIsCustomBackground] = useState(false); // Nuevo estado
+  const [isPremium, setIsPremium] = useState(false);                   // Nuevo estado
+
   const { files, addFiles, cancelUpload, progress, isUploading, uploadingId } = useUploadFiles();
+
+  const handleAddFiles = (newFiles: File[]) => {
+    // Pasar los nuevos estados a addFiles
+    addFiles(newFiles, isCustomBackground, isPremium);
+  };
 
   return (
     <div className="mt-3">
+      {/* Opciones para fondos personalizados */}
+      <div className="mb-4 p-3 border rounded-lg bg-gray-50">
+        <div className="flex items-center mb-2">
+          <input
+            type="checkbox"
+            id="isCustomBackground"
+            checked={isCustomBackground}
+            onChange={(e) => {
+              setIsCustomBackground(e.target.checked);
+              // Si no es un fondo personalizado, asegúrate de que no sea premium
+              if (!e.target.checked) {
+                setIsPremium(false);
+              }
+            }}
+            className="mr-2 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+          />
+          <label htmlFor="isCustomBackground" className="text-sm font-medium text-gray-700">
+            This is a Custom Background
+          </label>
+        </div>
+        {isCustomBackground && (
+          <div className="ml-6 flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">Type:</span>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="backgroundType"
+                value="free"
+                checked={!isPremium}
+                onChange={() => setIsPremium(false)}
+                className="mr-1 h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-600">Free</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="backgroundType"
+                value="premium"
+                checked={isPremium}
+                onChange={() => setIsPremium(true)}
+                className="mr-1 h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-600">Premium</span>
+            </label>
+          </div>
+        )}
+      </div>
+
       <div
         onDrop={(e) => {
           e.preventDefault();
           if (e.dataTransfer.files) {
-            addFiles(Array.from(e.dataTransfer.files));
+            handleAddFiles(Array.from(e.dataTransfer.files));
             setIsDragOver(false);
           }
         }}
@@ -133,7 +205,7 @@ const UploadBox = () => {
           id="file"
           onChange={(e) => {
             if (e.target.files) {
-              addFiles(Array.from(e.target.files));
+              handleAddFiles(Array.from(e.target.files));
             }
           }}
           type="file"
@@ -153,6 +225,8 @@ const UploadBox = () => {
               onCancel={() => cancelUpload(file.id)}
               isUploaded={file.isUploaded}
               error={file.error}
+              isCustomBackground={file.isCustomBackground} // Pasar el prop
+              isPremium={file.isPremium}                   // Pasar el prop
             />
           ))}
         </div>

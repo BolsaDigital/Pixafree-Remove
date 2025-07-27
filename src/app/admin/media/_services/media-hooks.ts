@@ -3,8 +3,8 @@ import { queryKeys } from '@/config/queryKeys';
 import { Media } from '@prisma/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useEffect, useRef, useState, MutableRefObject } from 'react'; // Importa MutableRefObject
-import { toast } from 'sonner'; // ¡Confirmado! Esta línea está presente y correcta.
+import { useEffect, useRef, useState, MutableRefObject } from 'react';
+import { toast } from 'sonner';
 
 import { generateRandomKey } from '@/lib/crypto';
 import { SortOrder } from '@/lib/schema';
@@ -13,11 +13,14 @@ import mediaActions from './media-actions';
 
 const apiUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
+// Actualizamos el tipo UploadFile
 type UploadFile = {
   id: string;
   file: File;
   error?: string;
   isUploaded?: boolean;
+  isCustomBackground?: boolean; // Nuevo campo
+  isPremium?: boolean;          // Nuevo campo
 };
 
 export const useUploadFiles = () => {
@@ -26,33 +29,40 @@ export const useUploadFiles = () => {
   const [progress, setProgress] = useState(0);
   const [isUploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
-  // Corrige la declaración de controller para usar MutableRefObject
   const controller: MutableRefObject<AbortController | null> = useRef(null);
 
-  const addFiles = (files: File[]) => {
-    const filteredFiles = files.filter((file) => {
+  // Actualizamos addFiles para aceptar los nuevos parámetros
+  const addFiles = (
+    newFiles: File[],
+    isCustomBackground: boolean = false, // Nuevo parámetro
+    isPremium: boolean = false           // Nuevo parámetro
+  ) => {
+    const filteredFiles = newFiles.filter((file) => {
       const ext = file.name.split('.').pop();
       if (!ALLOWED_ADMIN_UPLOAD_TYPES.find((type) => file.type.startsWith(type) || type === ext)) {
         toast.error('File type not allowed .' + ext);
-
         return false;
       }
-
       return true;
     });
-    const newFiles = filteredFiles.map((file) => ({
+    const filesToAdd = filteredFiles.map((file) => ({
       id: generateRandomKey(16),
       file,
+      isCustomBackground, // Asignar el nuevo campo
+      isPremium,          // Asignar el nuevo campo
     }));
-    setFiles((prev) => [...prev, ...newFiles]);
+    setFiles((prev) => [...prev, ...filesToAdd]);
   };
 
   const uploadFile = async (item: UploadFile) => {
     const formData = new FormData();
     formData.append('file', item.file);
+    // Añadir los nuevos campos al FormData
+    formData.append('isCustomBackground', String(item.isCustomBackground));
+    formData.append('isPremium', String(item.isPremium));
+
     setUploading(true);
     setProgress(0);
-    // Asigna la nueva instancia de AbortController a controller.current
     controller.current = new AbortController();
 
     try {
@@ -97,7 +107,7 @@ export const useUploadFiles = () => {
         uploadFile(file);
       }
     }
-  }, [files.length, isUploading, files, uploadFile]); // Añade 'uploadFile' a las dependencias del useEffect
+  }, [files.length, isUploading, files, uploadFile]);
 
   return {
     files,

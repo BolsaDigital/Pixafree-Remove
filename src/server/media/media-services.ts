@@ -11,7 +11,14 @@ import { uploadProviders } from '../settings/setting-schema';
 import settingServices from '../settings/setting-services';
 import mediaSchema from './media-schema';
 
-const uploadMedia = async (file: File, userId?: string, libraryMedia?: boolean) => {
+// Actualizamos uploadMedia para aceptar los nuevos parámetros
+const uploadMedia = async (
+  file: File,
+  userId?: string,
+  libraryMedia?: boolean,
+  isCustomBackground: boolean = false, // Nuevo parámetro
+  isPremium: boolean = false,          // Nuevo parámetro
+) => {
   const uploadConfig = await settingServices.getSettings('upload');
   const fileName = getUniqueFileName(file.name);
   const { url, key } = await uploadFile(file, fileName, uploadConfig, true);
@@ -28,21 +35,28 @@ const uploadMedia = async (file: File, userId?: string, libraryMedia?: boolean) 
       key,
       userId,
       libraryMedia,
+      isCustomBackground, // Guardar el nuevo campo
+      isPremium,          // Guardar el nuevo campo
     },
   });
 
   return media;
 };
 
+// Actualizamos createMedia para leer los nuevos campos del body
 const createMedia = async (c: Context<Env, string>) => {
   const body = await c.req.parseBody();
   const file = body['file'] as File;
+  // Convertir los valores de cadena a booleanos
+  const isCustomBackground = body['isCustomBackground'] === 'true';
+  const isPremium = body['isPremium'] === 'true';
 
   if (!file || !file.name) {
     throw new APIError('Please provide a valid file');
   }
 
-  return uploadMedia(file, undefined, true);
+  // Pasar los nuevos campos a uploadMedia
+  return uploadMedia(file, undefined, true, isCustomBackground, isPremium);
 };
 
 const getMedia = async (id: string) => {
@@ -56,6 +70,9 @@ const getMedia = async (id: string) => {
 const updateMedia = async (id: string, c: Context<Env, string>) => {
   const body = await c.req.parseBody();
   const file = body['file'] as File;
+  // También podemos añadir la lógica para actualizar isCustomBackground/isPremium si fuera necesario
+  // const isCustomBackground = body['isCustomBackground'] === 'true';
+  // const isPremium = body['isPremium'] === 'true';
 
   if (!file || !file.name) {
     throw new APIError('Please provide a valid file');
@@ -88,6 +105,9 @@ const updateMedia = async (id: string, c: Context<Env, string>) => {
       storageType: uploadConfig?.uploadProvider || uploadProviders[0],
       url,
       key,
+      // Aquí podrías añadir isCustomBackground y isPremium si se permitiera actualizarlos
+      // isCustomBackground: isCustomBackground,
+      // isPremium: isPremium,
     },
   });
 
@@ -118,8 +138,9 @@ const deleteMedia = async (ids: string[]) => {
   return media;
 };
 
-const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema>) => {
-  const { page, limit, search, sort, order } = query;
+// Modificamos queryMedia para permitir filtrar por isCustomBackground y isPremium
+const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema> & { isCustomBackground?: boolean; isPremium?: boolean }) => {
+  const { page, limit, search, sort, order, isCustomBackground, isPremium } = query;
 
   const where: Prisma.MediaWhereInput = {
     ...(search && {
@@ -128,7 +149,9 @@ const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema>) =
         mode: 'insensitive',
       },
     }),
-    libraryMedia: true,
+    libraryMedia: true, // Esto asegura que solo se muestren los medios de la librería
+    ...(typeof isCustomBackground === 'boolean' && { isCustomBackground }), // Nuevo filtro
+    ...(typeof isPremium === 'boolean' && { isPremium }), // Nuevo filtro
   };
 
   const [docs, total] = await Promise.all([

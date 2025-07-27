@@ -169,10 +169,12 @@ interface CopiedStyle {
   style: any;
 }
 
+// Interfaz para los fondos cargados desde el backend
 interface AdminBackground {
   id: string;
   url: string;
   isPremium: boolean;
+  // Otros campos que tu API pueda devolver (ej. name, mimeType, etc.)
 }
 
 interface DisplayBackground {
@@ -186,7 +188,6 @@ const CANVAS_SIZE = 700;
 export default function EditorPage() {
   const searchParams = useSearchParams();
 
-  // MODIFICACIÓN CLAVE: Inicializar productImageUrl con el valor de la URL si existe
   const initialProductImageUrl = searchParams.get('image_url') || 'https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload';
   const [productImageUrl, setProductImageUrl] = useState<string>(initialProductImageUrl);
 
@@ -271,14 +272,13 @@ export default function EditorPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
 
-  const [isUploadingAdminPreset, setIsUploadingAdminPreset] = useState(false);
+  // Estado para los fondos subidos por el administrador (ahora se cargarán desde el backend)
   const [adminUploadedBackgrounds, setAdminUploadedBackgrounds] = useState<AdminBackground[]>([]);
-  const [newPresetIsPremium, setNewPresetIsPremium] = useState<boolean>(false);
+  // Eliminamos newPresetIsPremium y isUploadingAdminPreset de aquí, ya que se moverán al admin panel.
 
   const unifiedImageUploadRef = useRef<HTMLInputElement>(null);
   const uploadCustomBackgroundRef = useRef<HTMLInputElement>(null);
-  const adminUploadPresetRef = useRef<HTMLInputElement>(null);
-  const aiReferenceImageRef = useRef<HTMLInputElement>(null);
+  const aiReferenceImageRef = useRef<HTMLInputElement>(null); // adminUploadPresetRef ya no es necesario aquí
 
   const [showCenterGuides, setShowCenterGuides] = useState(true);
 
@@ -296,6 +296,7 @@ export default function EditorPage() {
     { name: 'Contorno', text: 'Contorno', fontSize: 30, fontFamily: '#FFFFFF', stroke: '#000000', strokeWidth: 2, align: 'center' },
   ];
 
+  // Mantener los fondos hardcodeados y de APIs externas si aún los quieres
   const hardcodedPresetBackgrounds: DisplayBackground[] = [
     { id: 'hardcoded-1', url: 'https://placehold.co/150x150/AEC6CF/000000', isPremium: false },
     { id: 'hardcoded-2', url: 'https://placehold.co/150x150/FFDAB9/000000', isPremium: false },
@@ -353,29 +354,32 @@ export default function EditorPage() {
     }
   }, []);
 
+  // Nuevo useEffect para cargar los fondos personalizados desde el backend
   useEffect(() => {
-    // This useEffect would be where you fetch your admin-uploaded backgrounds
-    // from your `https://pixafree.online/admin/media` API.
-    // Example (conceptual):
-    /*
-    const fetchMyAdminBackgrounds = async () => {
+    const fetchAdminBackgrounds = async () => {
       try {
-        const response = await fetch('https://pixafree.online/api/admin/media-backgrounds', {
-          headers: {
-            'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
-          }
-        });
+        // Asumiendo que tu API para obtener medios es /api/media
+        // y que puedes filtrar por isCustomBackground=true
+        const response = await fetch('/api/media?isCustomBackground=true'); // Ajusta esta URL si tu API es diferente
         if (!response.ok) {
           throw new Error('Failed to fetch admin backgrounds');
         }
         const data = await response.json();
-        setAdminUploadedBackgrounds(data.backgrounds);
+        // Asegúrate de que la respuesta tenga la estructura esperada (docs array)
+        if (data && Array.isArray(data.docs)) {
+          setAdminUploadedBackgrounds(data.docs.map((media: any) => ({
+            id: media.id,
+            url: media.url,
+            isPremium: media.isPremium,
+          })));
+        }
       } catch (error) {
         console.error('Error fetching admin backgrounds from your API:', error);
       }
     };
-    */
-  }, []);
+
+    fetchAdminBackgrounds();
+  }, []); // Se ejecuta una vez al montar el componente
 
 
   const getCurrentCanvasState = useCallback((): CanvasState => {
@@ -452,7 +456,7 @@ export default function EditorPage() {
     setBackgroundBlurRadius(state.backgroundBlurRadius);
     setBackgroundShadowEnabled(state.backgroundShadowEnabled);
     setBackgroundShadowColor(state.backgroundShadowColor);
-    setBackgroundShadowBlur(state.backgroundShadowBlur); // Corrected this line
+    setBackgroundShadowBlur(state.backgroundShadowBlur);
     setBackgroundShadowOffsetX(state.backgroundShadowOffsetX);
     setBackgroundShadowOffsetY(state.backgroundShadowOffsetY);
     setBackgroundShadowOpacity(state.backgroundShadowOpacity);
@@ -507,20 +511,18 @@ export default function EditorPage() {
       setTextElements, setShapeElements, setDateElement, setImageElements
   ]);
 
-  // MODIFICACIÓN CLAVE: Este useEffect ahora solo se encarga de la URL inicial
   useEffect(() => {
-    const imageUrlFromParam = searchParams.get('image_url'); // Usamos 'image_url' como se definió en BgRemoveBox
+    const imageUrlFromParam = searchParams.get('image_url');
     if (imageUrlFromParam && productImageUrl === 'https://placehold.co/280x280/99e6ff/000000?text=Click+%27Imagen%27+to+Upload') {
-      // Solo actualiza si la URL actual es el placeholder
       setProductImageUrl(imageUrlFromParam);
-      setProductX(CANVAS_SIZE / 2); // Centrar la imagen inicialmente
-      setProductY(CANVAS_SIZE / 2); // Centrar la imagen inicialmente
-      setProductScale(1); // Resetear escala
-      setProductRotation(0); // Resetear rotación
-      setHasProductBeenScaledManually(false); // Resetear bandera
-      setSelectedCanvasElement('product'); // Seleccionar el producto
+      setProductX(CANVAS_SIZE / 2);
+      setProductY(CANVAS_SIZE / 2);
+      setProductScale(1);
+      setProductRotation(0);
+      setHasProductBeenScaledManually(false);
+      setSelectedCanvasElement('product');
     }
-  }, [searchParams, productImageUrl, CANVAS_SIZE]); // Dependencias actualizadas
+  }, [searchParams, productImageUrl, CANVAS_SIZE]);
 
   useEffect(() => {
     console.log('Product Image URL Effect Firing:', { productImageUrl, productScale, hasProductBeenScaledManually });
@@ -1458,7 +1460,7 @@ export default function EditorPage() {
       reflectionEnabled: backgroundReflectionEnabled,
       filter: backgroundFilter,
       setOpacity: setBackgroundOpacity, setBlurRadius: setBackgroundBlurRadius,
-      setShadowEnabled: setBackgroundShadowEnabled, setShadowColor: setBackgroundShadowColor, setShadowBlur: setBackgroundShadowBlur, // Corrected this line
+      setShadowEnabled: setBackgroundShadowEnabled, setShadowColor: setBackgroundShadowColor, setShadowBlur: setBackgroundShadowBlur,
       setShadowOffsetX: setBackgroundShadowOffsetX, setShadowOffsetY: setBackgroundShadowOffsetY, setShadowOpacity: setBackgroundShadowOpacity,
       setReflectionEnabled: setBackgroundReflectionEnabled,
       setFilter: setBackgroundFilter,
@@ -1475,7 +1477,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateTextElement(selectedTextElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetY: val }), // Corrected this line
+      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateTextElement(selectedTextElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateTextElement(selectedTextElementId!, { filter: val }),
@@ -1492,7 +1494,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateShapeElement(selectedShapeElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetY: val }), // Corrected this line
+      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateShapeElement(selectedShapeElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateShapeElement(selectedShapeElementId!, { filter: val }),
@@ -1509,7 +1511,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateDateElement({ shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateDateElement({ shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateDateElement({ shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateDateElement({ shadowOffsetY: val }), // Corrected this line
+      setShadowOffsetY: (val: number) => handleUpdateDateElement({ shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateDateElement({ shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateDateElement({ reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateDateElement({ filter: val }),
@@ -1526,7 +1528,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }), // Corrected this line
+      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateImageElement(selectedImageElementId!, { filter: val }),
@@ -1545,79 +1547,12 @@ export default function EditorPage() {
     };
   }, []);
 
-  const handleAdminUploadPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setIsUploadingAdminPreset(true);
-      // Simulate API call to your backend
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-
-      const newImageUrl = URL.createObjectURL(file); // For local preview
-      const newId = `admin-local-${Date.now()}`; // Unique ID for local state
-      setAdminUploadedBackgrounds((prev) => [...prev, { id: newId, url: newImageUrl, isPremium: newPresetIsPremium }]);
-      alert("Fondo preestablecido subido exitosamente (solo en esta sesión)!"); // Inform user
-      event.target.value = ''; // Clear the input so same file can be selected again
-
-      setIsUploadingAdminPreset(false);
-      // In a real application, you would send this file to your backend API here:
-      /*
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('isPremium', String(newPresetIsPremium)); // Send premium status
-        const response = await fetch('https://pixafree.online/api/admin/upload-background', { // Replace with your actual API endpoint
-          method: 'POST',
-          body: formData,
-          // Add authentication headers if needed
-        });
-        if (!response.ok) {
-          throw new Error('Failed to upload preset to backend');
-        }
-        const uploadedData = await response.json();
-        // Update adminUploadedBackgrounds with actual URL/ID from backend if needed
-        setAdminUploadedBackgrounds((prev) => [...prev, { id: uploadedData.id, url: uploadedData.url, isPremium: uploadedData.isPremium }]);
-        alert("Fondo preestablecido subido exitosamente!");
-      } catch (error) {
-        console.error('Error uploading admin preset:', error);
-        alert("Error al subir el fondo preestablecido.");
-      } finally {
-        setIsUploadingAdminPreset(false);
-        event.target.value = '';
-      }
-      */
-    }
-  };
-
-  const handleDeleteAdminPreset = async (idToDelete: string) => {
-    // In a real application, you would send a delete request to your backend API here.
-    if (confirm("¿Estás seguro de que quieres eliminar este fondo preestablecido? (Esto no eliminará el archivo de tu servidor real)")) {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call delay
-      setAdminUploadedBackgrounds((prev) => prev.filter((bg) => bg.id !== idToDelete));
-      alert("Fondo preestablecido eliminado de esta sesión (no de tu servidor)!");
-      /*
-      try {
-        const response = await fetch(`https://pixafree.online/api/admin/delete-background/${idToDelete}`, { // Replace with your actual API endpoint
-          method: 'DELETE',
-          // Add authentication headers if needed
-        });
-        if (!response.ok) {
-          throw new Error('Failed to delete preset from backend');
-        }
-        const uploadedData = await response.json();
-        // Update adminUploadedBackgrounds with actual URL/ID from backend if needed
-        setAdminUploadedBackgrounds((prev) => prev.filter((bg) => bg.id !== idToDelete));
-        alert("Fondo preestablecido eliminado exitosamente!");
-      } catch (error) {
-        console.error('Error deleting admin preset:', error);
-        alert("Error al eliminar el fondo preestablecido.");
-      }
-      */
-    }
-  };
+  // Eliminamos handleAdminUploadPreset y handleDeleteAdminPreset de aquí
+  // ya que la administración se moverá al panel de administración.
 
   const allPresetBackgrounds: DisplayBackground[] = [
     ...hardcodedPresetBackgrounds,
-    ...adminUploadedBackgrounds,
+    ...adminUploadedBackgrounds, // Ahora contendrá los fondos cargados desde el backend
     ...pixabaySampleImages,
     ...pexelsSampleImages,
   ];
@@ -1946,105 +1881,47 @@ export default function EditorPage() {
               <CollapsibleSection title="Fondos Preestablecidos" isOpen={true} setIsOpen={() => {}} icon={Layout}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
                   {allPresetBackgrounds.map((bg) => (
-                    <div
-                      key={bg.id}
-                      style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', cursor: 'pointer', border: `1px solid ${bg.isPremium && !isUserPremium ? '#f59e0b' : '#e5e7eb'}`, opacity: bg.isPremium && !isUserPremium ? 0.6 : 1, transition: 'all 0.2s' }}
-                      onClick={() => handleSelectPresetBackground(bg)}
-                    >
-                      <img src={bg.url} alt={`Fondo ${bg.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      {bg.isPremium && (
-                        <span style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
-                          Premium
-                        </span>
-                      )}
-                      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
-                        <Plus size={24} style={{ color: '#ffffff', opacity: 0, transition: 'opacity 0.2s' }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleSection>
-
-              <CollapsibleSection title="Administrar Fondos Personalizados (Integrar con tu API)" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
-                <p style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
-                  Aquí puedes subir nuevos fondos preestablecidos que se guardarán en tu propio sistema de medios (ej. `https://pixafree.online/admin/media`).
-                </p>
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>Tipo de Fondo:</span>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <label style={{ display: 'inline-flex', alignItems: 'center' }}>
-                      <input
-                        type="radio"
-                        style={{ color: '#3b82f6' }}
-                        name="presetType"
-                        value="free"
-                        checked={!newPresetIsPremium}
-                        onChange={() => setNewPresetIsPremium(false)}
-                      />
-                      <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Gratis</span>
-                    </label>
-                    <label style={{ display: 'inline-flex', alignItems: 'center' }}>
-                      <input
-                        type="radio"
-                        style={{ color: '#3b82f6' }}
-                        name="presetType"
-                        value="premium"
-                        checked={newPresetIsPremium}
-                        onChange={() => setNewPresetIsPremium(true)}
-                      />
-                      <span style={{ marginLeft: '0.5rem', color: '#4b5563' }}>Premium</span>
-                    </label>
-                  </div>
-                </div>
-                <label htmlFor="adminUploadPreset" style={{ cursor: 'pointer', padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: 'semibold', textAlign: 'center', display: 'block', backgroundColor: isUploadingAdminPreset ? '#93c5fd' : '#3b82f6', color: '#ffffff' }}>
-                  {isUploadingAdminPreset ? 'Subiendo...' : 'Subir Nuevo Fondo'}
-                </label>
-                <input
-                  id="adminUploadPreset"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAdminUploadPreset}
-                  style={{ display: 'none' }}
-                  ref={adminUploadPresetRef}
-                  disabled={isUploadingAdminPreset}
-                />
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                  **Nota:** La subida es solo para demostración en esta sesión. Para persistencia, debes integrar con tu API.
-                </p>
-
-                <h4 style={{ fontSize: '1rem', fontWeight: 'semibold', color: '#4b5563', marginTop: '1rem', marginBottom: '0.5rem' }}>Fondos Subidos (Solo en esta sesión)</h4>
-                {adminUploadedBackgrounds.length === 0 ? (
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>No has subido ningún fondo en esta sesión.</p>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '15rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                    {adminUploadedBackgrounds.map((preset) => (
+                    // Renderiza solo si no es premium O si el usuario es premium
+                    (!bg.isPremium || isUserPremium) && (
                       <div
-                        key={preset.id}
-                        style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}
+                        key={bg.id}
+                        style={{ position: 'relative', width: '100%', height: '6rem', borderRadius: '0.375rem', overflow: 'hidden', cursor: 'pointer', border: `1px solid ${bg.isPremium && !isUserPremium ? '#f59e0b' : '#e5e7eb'}`, opacity: bg.isPremium && !isUserPremium ? 0.6 : 1, transition: 'all 0.2s' }}
+                        onClick={() => handleSelectPresetBackground(bg)}
                       >
-                        <img src={preset.url} alt={`Admin Uploaded ${preset.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        {preset.isPremium && (
-                          <span style={{ position: 'absolute', top: '0.25rem', left: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
+                        <img src={bg.url} alt={`Fondo ${bg.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {bg.isPremium && (
+                          <span style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#f59e0b', color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold', padding: '0.25rem 0.5rem', borderRadius: '9999px' }}>
                             Premium
                           </span>
                         )}
-                        <button
-                          onClick={() => handleDeleteAdminPreset(preset.id)}
-                          style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '9999px', padding: '0.25rem', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s' }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
+                          <Plus size={24} style={{ color: '#ffffff', opacity: 0, transition: 'opacity 0.2s' }} />
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  ))}
+                  {/* Mensaje si no hay fondos disponibles (ej. si todos son premium y el usuario no lo es) */}
+                  {allPresetBackgrounds.filter(bg => !bg.isPremium || isUserPremium).length === 0 && (
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', gridColumn: 'span 2', textAlign: 'center' }}>
+                      No hay fondos preestablecidos disponibles.
+                    </p>
+                  )}
+                </div>
+                {/* Botón "Get Pro" si hay fondos premium y el usuario no lo es */}
+                {allPresetBackgrounds.some(bg => bg.isPremium) && !isUserPremium && (
+                  <button
+                    onClick={handleGetProClick}
+                    style={{ marginTop: '1rem', width: '100%', padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#f59e0b', color: '#ffffff', fontWeight: 'semibold', border: 'none', cursor: 'pointer' }}
+                  >
+                    Obtener PRO para desbloquear fondos premium
+                  </button>
                 )}
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                  **Implementación:** Para que los fondos subidos persistan y estén disponibles para todos los usuarios, deberás:
-                  <br/>1. Llamar a tu API de backend (`https://pixafree.online/admin/media` o similar) en `handleAdminUploadPreset` para subir el archivo, incluyendo el estado `isPremium`.
-                  <br/>2. Llamar a tu API en `handleDeleteAdminPreset` para eliminar el archivo.
-                  <br/>3. En la sección "Fondos Preestablecidos", deberás cargar las URLs y el estado `isPremium` de las imágenes desde tu API de medios al inicio de la aplicación.
-                </p>
               </CollapsibleSection>
+
+              {/* Eliminamos la sección de Administrar Fondos Personalizados de aquí */}
+              {/* <CollapsibleSection title="Administrar Fondos Personalizados (Integrar con tu API)" isOpen={true} setIsOpen={() => {}} icon={ImageIcon}>
+                ... (contenido eliminado) ...
+              </CollapsibleSection> */}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
