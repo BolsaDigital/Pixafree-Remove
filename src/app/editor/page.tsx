@@ -1228,6 +1228,91 @@ export default function EditorPage() {
   }, [selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedImageElementId, dateElement, textElements, shapeElements, imageElements, handleElementSelect, onTransformEndCommit]);
 
   const handleCopyStyle = useCallback(() => {
+    if (!selectedCanvasElement || (selectedCanvasElement === 'background' && !selectedPresetBackgroundUrl)) {
+      alert('Selecciona un elemento (producto, texto, figura, fecha o imagen) para copiar su estilo.');
+      return;
+    }
+
+    let styleToCopy: any = {};
+    let typeToCopy: CopiedStyle['type'] | null = null;
+
+    if (selectedCanvasElement === 'product') {
+      typeToCopy = 'image'; // Consider product as an image for styling purposes
+      styleToCopy = {
+        opacity: productOpacity, blurRadius: productBlurRadius,
+        shadowEnabled: productShadowEnabled, shadowColor: productShadowColor, shadowBlur: productShadowBlur, shadowOffsetX: productShadowOffsetX, shadowOffsetY: productShadowOffsetY, shadowOpacity: productShadowOpacity,
+        reflectionEnabled: productReflectionEnabled,
+        flipX: productFlipX, flipY: productFlipY,
+        filter: productFilter,
+      };
+    } else if (selectedCanvasElement === 'background') {
+      typeToCopy = 'image'; // Treat background as image for styling
+      styleToCopy = {
+        opacity: backgroundOpacity, blurRadius: backgroundBlurRadius,
+        shadowEnabled: backgroundShadowEnabled, shadowColor: backgroundShadowColor, shadowBlur: backgroundShadowBlur, shadowOffsetX: backgroundShadowOffsetX, shadowOffsetY: backgroundShadowOffsetY, shadowOpacity: backgroundShadowOpacity,
+        reflectionEnabled: backgroundReflectionEnabled,
+        flipX: backgroundFlipX, flipY: backgroundFlipY,
+        filter: backgroundFilter,
+      };
+    } else if (selectedCanvasElement === 'text' && currentTextElement) {
+      typeToCopy = 'text';
+      styleToCopy = {
+        fontSize: currentTextElement.fontSize, fill: currentTextElement.fill, fontFamily: currentTextElement.fontFamily, align: currentTextElement.align,
+        opacity: currentTextElement.opacity, blurRadius: currentTextElement.blurRadius,
+        shadowEnabled: currentTextElement.shadowEnabled, shadowColor: currentTextElement.shadowColor, shadowBlur: currentTextElement.shadowBlur, shadowOffsetX: currentTextElement.shadowOffsetX, shadowOffsetY: currentTextElement.shadowOffsetY, shadowOpacity: currentTextElement.shadowOpacity,
+        reflectionEnabled: currentTextElement.reflectionEnabled,
+        flipX: currentTextElement.flipX, flipY: currentTextElement.flipY,
+        filter: currentTextElement.filter,
+        textDecoration: currentTextElement.textDecoration, fontStyle: currentTextElement.fontStyle,
+        stroke: currentTextElement.stroke, strokeWidth: currentTextElement.strokeWidth,
+      };
+    } else if (selectedCanvasElement === 'shape' && currentShapeElement) {
+      typeToCopy = 'shape';
+      styleToCopy = {
+        fill: currentShapeElement.fill, stroke: currentShapeElement.stroke, strokeWidth: currentShapeElement.strokeWidth,
+        opacity: currentShapeElement.opacity, blurRadius: currentShapeElement.blurRadius,
+        shadowEnabled: currentShapeElement.shadowEnabled, shadowColor: currentShapeElement.shadowColor, shadowBlur: currentShapeElement.shadowBlur, shadowOffsetX: currentShapeElement.shadowOffsetX, shadowOffsetY: currentShapeElement.shadowOffsetY, shadowOpacity: currentShapeElement.shadowOpacity,
+        reflectionEnabled: currentShapeElement.reflectionEnabled,
+        flipX: currentShapeElement.flipX, flipY: currentShapeElement.flipY,
+        filter: currentShapeElement.filter,
+      };
+    } else if (selectedCanvasElement === 'date' && currentDateElement) {
+      typeToCopy = 'date';
+      styleToCopy = {
+        fontSize: currentDateElement.fontSize, fill: currentDateElement.fill, fontFamily: currentDateElement.fontFamily, format: currentDateElement.format,
+        opacity: currentDateElement.opacity, blurRadius: currentDateElement.blurRadius,
+        shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity,
+        reflectionEnabled: currentDateElement.reflectionEnabled,
+        flipX: currentDateElement.flipX, flipY: currentDateElement.flipY,
+        filter: currentDateElement.filter,
+      };
+    } else if (selectedCanvasElement === 'image' && currentImageElement) {
+      typeToCopy = 'image';
+      styleToCopy = {
+        opacity: currentImageElement.opacity, blurRadius: currentImageElement.blurRadius,
+        shadowEnabled: currentImageElement.shadowEnabled, shadowColor: currentImageElement.shadowColor, shadowBlur: currentImageElement.shadowBlur, shadowOffsetX: currentImageElement.shadowOffsetX, shadowOffsetY: currentImageElement.shadowOffsetY, shadowOpacity: currentImageElement.shadowOpacity,
+        reflectionEnabled: currentImageElement.reflectionEnabled,
+        flipX: currentImageElement.flipX, flipY: currentImageElement.flipY,
+        filter: currentImageElement.filter,
+      };
+    }
+
+    if (typeToCopy && Object.keys(styleToCopy).length > 0) {
+      setCopiedStyle({ type: typeToCopy, style: styleToCopy });
+      alert('Estilo copiado.');
+    } else {
+      alert('No se pudo copiar el estilo del elemento seleccionado.');
+    }
+    setShowMoreToolsDropdown(false); // Close dropdown after action
+  }, [
+    selectedCanvasElement, selectedPresetBackgroundUrl,
+    productOpacity, productBlurRadius, productShadowEnabled, productShadowColor, productShadowBlur, productShadowOffsetX, productShadowOffsetY, productShadowOpacity, productReflectionEnabled, productFlipX, productFlipY, productFilter,
+    backgroundOpacity, backgroundBlurRadius, backgroundShadowEnabled, backgroundShadowColor, backgroundShadowBlur, backgroundShadowOffsetX, backgroundShadowOffsetY, backgroundShadowOpacity, backgroundReflectionEnabled, backgroundFlipX, backgroundFlipY, backgroundFilter,
+    currentTextElement, currentShapeElement, currentDateElement, currentImageElement
+  ]);
+
+
+  const handlePasteStyle = useCallback(() => {
     if (!copiedStyle) {
       alert('Primero copia un estilo de un elemento.');
       return;
@@ -1250,12 +1335,48 @@ export default function EditorPage() {
       handleUpdateDateElement(copiedStyle.style);
       onTransformEndCommit();
       alert('Estilo pegado a la fecha.');
+    } else if (selectedCanvasElement === 'product' && copiedStyle.type === 'image') {
+      setProductOpacity(copiedStyle.style.opacity);
+      setProductBlurRadius(copiedStyle.style.blurRadius);
+      setProductShadowEnabled(copiedStyle.style.shadowEnabled);
+      setProductShadowColor(copiedStyle.style.shadowColor);
+      setProductShadowBlur(copiedStyle.style.shadowBlur);
+      setProductShadowOffsetX(copiedStyle.style.shadowOffsetX);
+      setProductShadowOffsetY(copiedStyle.style.shadowOffsetY);
+      setProductShadowOpacity(copiedStyle.style.shadowOpacity);
+      setProductReflectionEnabled(copiedStyle.style.reflectionEnabled);
+      setProductFlipX(copiedStyle.style.flipX);
+      setProductFlipY(copiedStyle.style.flipY);
+      setProductFilter(copiedStyle.style.filter);
+      onTransformEndCommit();
+      alert('Estilo pegado al producto.');
+    } else if (selectedCanvasElement === 'background' && copiedStyle.type === 'image') {
+      setBackgroundOpacity(copiedStyle.style.opacity);
+      setBackgroundBlurRadius(copiedStyle.style.blurRadius);
+      setBackgroundShadowEnabled(copiedStyle.style.shadowEnabled);
+      setBackgroundShadowColor(copiedStyle.style.shadowColor);
+      setBackgroundShadowBlur(copiedStyle.style.shadowBlur);
+      setBackgroundShadowOffsetX(copiedStyle.style.shadowOffsetX);
+      setBackgroundShadowOffsetY(copiedStyle.style.shadowOffsetY);
+      setBackgroundShadowOpacity(copiedStyle.style.shadowOpacity);
+      setBackgroundReflectionEnabled(copiedStyle.style.reflectionEnabled);
+      setBackgroundFlipX(copiedStyle.style.flipX);
+      setBackgroundFlipY(copiedStyle.style.flipY);
+      setBackgroundFilter(copiedStyle.style.filter);
+      onTransformEndCommit();
+      alert('Estilo pegado al fondo.');
     }
     else {
       alert('El estilo copiado no es compatible con el elemento seleccionado.');
     }
     setShowMoreToolsDropdown(false); // Close dropdown after action
-  }, [copiedStyle, selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedImageElementId, dateElement, handleUpdateTextElement, handleUpdateShapeElement, handleUpdateImageElement, handleUpdateDateElement, onTransformEndCommit]);
+  }, [
+    copiedStyle, selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedImageElementId, dateElement,
+    handleUpdateTextElement, handleUpdateShapeElement, handleUpdateImageElement, handleUpdateDateElement,
+    setProductOpacity, setProductBlurRadius, setProductShadowEnabled, setProductShadowColor, setProductShadowBlur, setProductShadowOffsetX, setProductShadowOffsetY, setProductShadowOpacity, setProductReflectionEnabled, setProductFlipX, setProductFlipY, setProductFilter,
+    setBackgroundOpacity, setBackgroundBlurRadius, setBackgroundShadowEnabled, setBackgroundShadowColor, setBackgroundShadowBlur, setBackgroundShadowOffsetX, setBackgroundShadowOffsetY, setBackgroundShadowOpacity, setBackgroundReflectionEnabled, setBackgroundFlipX, setBackgroundFlipY, setBackgroundFilter,
+    onTransformEndCommit
+  ]);
 
 
   const handleZOrder = useCallback((action: 'up' | 'down' | 'top' | 'bottom') => {
@@ -1437,7 +1558,7 @@ export default function EditorPage() {
   } else if (isDateSelected && currentDateElement) {
     currentElementProps = {
       opacity: currentDateElement.opacity, blurRadius: currentDateElement.blurRadius,
-      shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity,
+      shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity,
       reflectionEnabled: currentDateElement.reflectionEnabled,
       filter: currentDateElement.filter,
       setOpacity: (val: number) => handleUpdateDateElement({ opacity: val }),
