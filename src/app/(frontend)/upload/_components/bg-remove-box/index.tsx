@@ -3,7 +3,7 @@
 import { ALLOWED_IMAGE_TYPES } from '@/config/constants';
 import { ChevronDownIcon, Loader2, PlusIcon, XIcon } from 'lucide-react';
 import Image from 'next/image';
-import React, { useEffect } from 'react'; // Importar useEffect
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,8 @@ import {
 
 import { cn } from '@/lib/utils';
 
-import { useRemoveBg } from '../../upload/_services/removebg-hooks'; // Ruta corregida
+// RUTA DE IMPORTACIÓN CORREGIDA AQUÍ
+import { useRemoveBg } from '../_services/removebg-hooks'; 
 
 const BgRemoveBox = () => {
   const {
@@ -32,7 +33,7 @@ const BgRemoveBox = () => {
     inputRef,
     downloadPremium,
     premiumDownloadMutation,
-    error, // Acceder al estado de error
+    error,
   } = useRemoveBg();
 
   // Determinar la URL de la imagen sin fondo para el editor
