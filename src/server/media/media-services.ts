@@ -17,7 +17,7 @@ const uploadMedia = async (
   userId?: string,
   libraryMedia?: boolean,
   isCustomBackground: boolean = false, // Nuevo parámetro
-  isPremium: boolean = false,          // Nuevo parámetro
+  isPremium: boolean = false,           // Nuevo parámetro
 ) => {
   const uploadConfig = await settingServices.getSettings('upload');
   const fileName = getUniqueFileName(file.name);

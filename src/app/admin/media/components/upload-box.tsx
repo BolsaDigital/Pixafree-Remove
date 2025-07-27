@@ -112,7 +112,7 @@ const UploadFiles = ({
 const UploadBox = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isCustomBackground, setIsCustomBackground] = useState(false); // Nuevo estado
-  const [isPremium, setIsPremium] = useState(false);                   // Nuevo estado
+  const [isPremium, setIsPremium] = useState(false);                    // Nuevo estado
 
   const { files, addFiles, cancelUpload, progress, isUploading, uploadingId } = useUploadFiles();
 
@@ -226,7 +226,7 @@ const UploadBox = () => {
               isUploaded={file.isUploaded}
               error={file.error}
               isCustomBackground={file.isCustomBackground} // Pasar el prop
-              isPremium={file.isPremium}                   // Pasar el prop
+              isPremium={file.isPremium}                    // Pasar el prop
             />
           ))}
         </div>

@@ -922,7 +922,7 @@ export default function EditorPage() {
 
   const processImageWithReplicate = async () => {
     if (!productImageUrl || productImageUrl.includes('placeholder.com') || productImageUrl.includes('placehold.co')) {
-      alert('Por favor, selecciona primero una imagen de producto para simular el procesamiento.');
+      alert('Por favor, selecciona primero una imagen de producto real para simular el procesamiento.');
       return;
     }
     alert('Esta función de "Editar recorte" es una simulación para demostrar una posible integración con IA. Para una funcionalidad real, necesitarías un servicio de procesamiento de imágenes (como Replicate AI) o implementar una herramienta de recorte directamente en el lienzo.');
@@ -1228,71 +1228,6 @@ export default function EditorPage() {
   }, [selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedImageElementId, dateElement, textElements, shapeElements, imageElements, handleElementSelect, onTransformEndCommit]);
 
   const handleCopyStyle = useCallback(() => {
-    if (selectedCanvasElement === 'text' && selectedTextElementId) {
-      const text = textElements.find(el => el.id === selectedTextElementId);
-      if (text) {
-        setCopiedStyle({
-          type: 'text',
-          style: {
-            fontSize: text.fontSize, fill: text.fill, fontFamily: text.fontFamily, align: text.align, opacity: text.opacity,
-            blurRadius: text.blurRadius,
-            shadowEnabled: text.shadowEnabled, shadowColor: text.shadowColor, shadowBlur: text.shadowBlur, shadowOffsetX: text.shadowOffsetX, shadowOffsetY: text.shadowOffsetY, shadowOpacity: text.shadowOpacity,
-            reflectionEnabled: text.reflectionEnabled,
-            filter: text.filter,
-            textDecoration: text.textDecoration, fontStyle: text.fontStyle, stroke: text.stroke, strokeWidth: text.strokeWidth,
-          }
-        });
-        alert('Estilo de texto copiado.');
-      }
-    } else if (selectedCanvasElement === 'shape' && selectedShapeElementId) {
-      const shape = shapeElements.find(el => el.id === selectedShapeElementId);
-      if (shape) {
-        setCopiedStyle({
-          type: 'shape',
-          style: {
-            fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth, opacity: shape.opacity,
-            blurRadius: shape.blurRadius,
-            shadowEnabled: shape.shadowEnabled, shadowColor: shape.shadowColor, shadowBlur: shape.shadowBlur, shadowOffsetX: shape.shadowOffsetX, shadowOffsetY: shape.shadowOffsetY, shadowOpacity: shape.shadowOpacity,
-            reflectionEnabled: shape.reflectionEnabled,
-            filter: shape.filter,
-          }
-        });
-        alert('Estilo de figura copiado.');
-      }
-    } else if (selectedCanvasElement === 'image' && selectedImageElementId) {
-      const image = imageElements.find(el => el.id === selectedImageElementId);
-      if (image) {
-        setCopiedStyle({
-          type: 'image',
-          style: {
-            opacity: image.opacity,
-            blurRadius: image.blurRadius,
-            shadowEnabled: image.shadowEnabled, shadowColor: image.shadowColor, shadowBlur: image.shadowBlur, shadowOffsetX: image.shadowOffsetX, shadowOffsetY: image.shadowOffsetY, shadowOpacity: image.shadowOpacity,
-            reflectionEnabled: image.reflectionEnabled,
-            filter: image.filter,
-          }
-        });
-        alert('Estilo de imagen copiado.');
-      }
-    } else if (selectedCanvasElement === 'date' && dateElement) {
-      setCopiedStyle({
-        type: 'date',
-        style: {
-          fontSize: dateElement.fontSize, fill: dateElement.fill, fontFamily: dateElement.fontFamily, opacity: dateElement.opacity,
-          blurRadius: dateElement.blurRadius,
-          shadowEnabled: dateElement.shadowEnabled, shadowColor: dateElement.shadowColor, shadowBlur: dateElement.shadowBlur, shadowOffsetX: dateElement.shadowOffsetX, shadowOffsetY: dateElement.shadowOffsetY, shadowOpacity: dateElement.shadowOpacity,
-          reflectionEnabled: dateElement.reflectionEnabled,
-          filter: dateElement.filter,
-        }
-      });
-      alert('Estilo de fecha copiado.');
-    } else {
-      alert('Selecciona un elemento (texto, figura, imagen o fecha) para copiar su estilo.');
-    }
-    setShowMoreToolsDropdown(false); // Close dropdown after action
-  }, [selectedCanvasElement, selectedTextElementId, selectedShapeElementId, selectedImageElementId, dateElement, textElements, shapeElements, imageElements]);
-
-  const handlePasteStyle = useCallback(() => {
     if (!copiedStyle) {
       alert('Primero copia un estilo de un elemento.');
       return;
