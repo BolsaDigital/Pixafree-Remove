@@ -452,7 +452,7 @@ export default function EditorPage() {
     setBackgroundBlurRadius(state.backgroundBlurRadius);
     setBackgroundShadowEnabled(state.backgroundShadowEnabled);
     setBackgroundShadowColor(state.backgroundShadowColor);
-    setBackgroundShadowBlur(state.backgroundBlurRadius); // Corrected from state.backgroundShadowBlur
+    setBackgroundShadowBlur(state.backgroundShadowBlur); // Corrected this line
     setBackgroundShadowOffsetX(state.backgroundShadowOffsetX);
     setBackgroundShadowOffsetY(state.backgroundShadowOffsetY);
     setBackgroundShadowOpacity(state.backgroundShadowOpacity);
@@ -1458,7 +1458,8 @@ export default function EditorPage() {
       reflectionEnabled: backgroundReflectionEnabled,
       filter: backgroundFilter,
       setOpacity: setBackgroundOpacity, setBlurRadius: setBackgroundBlurRadius,
-      setShadowEnabled: setBackgroundShadowEnabled, setShadowColor: setBackgroundShadowColor, setShadowBlur: setBackgroundBlurRadius, setShadowOffsetX: setBackgroundShadowOffsetX, setShadowOffsetY: setBackgroundShadowOffsetY, setShadowOpacity: setBackgroundShadowOpacity,
+      setShadowEnabled: setBackgroundShadowEnabled, setShadowColor: setBackgroundShadowColor, setShadowBlur: setBackgroundShadowBlur, // Corrected this line
+      setShadowOffsetX: setBackgroundShadowOffsetX, setShadowOffsetY: setBackgroundShadowOffsetY, setShadowOpacity: setBackgroundShadowOpacity,
       setReflectionEnabled: setBackgroundReflectionEnabled,
       setFilter: setBackgroundFilter,
     };
@@ -1474,7 +1475,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateTextElement(selectedTextElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetY: val }), // Corrected this line
       setShadowOpacity: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateTextElement(selectedTextElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateTextElement(selectedTextElementId!, { filter: val }),
@@ -1489,9 +1490,9 @@ export default function EditorPage() {
       setBlurRadius: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { blurRadius: val }),
       setShadowEnabled: (val: boolean) => handleUpdateShapeElement(selectedShapeElementId!, { shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateShapeElement(selectedShapeElementId!, { shadowColor: val }),
-      setShadowBlur: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { blurRadius: val }),
+      setShadowBlur: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { offsetY: val }), // Corrected from setShadowOffsetY
+      setShadowOffsetY: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOffsetY: val }), // Corrected this line
       setShadowOpacity: (val: number) => handleUpdateShapeElement(selectedShapeElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateShapeElement(selectedShapeElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateShapeElement(selectedShapeElementId!, { filter: val }),
@@ -1506,9 +1507,9 @@ export default function EditorPage() {
       setBlurRadius: (val: number) => handleUpdateDateElement({ blurRadius: val }),
       setShadowEnabled: (val: boolean) => handleUpdateDateElement({ shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateDateElement({ shadowColor: val }),
-      setShadowBlur: (val: number) => handleUpdateDateElement({ blurRadius: val }),
+      setShadowBlur: (val: number) => handleUpdateDateElement({ shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateDateElement({ shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateDateElement({ offsetY: val }), // Corrected from setShadowOffsetY
+      setShadowOffsetY: (val: number) => handleUpdateDateElement({ shadowOffsetY: val }), // Corrected this line
       setShadowOpacity: (val: number) => handleUpdateDateElement({ shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateDateElement({ reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateDateElement({ filter: val }),
@@ -1525,7 +1526,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { offsetY: val }), // Corrected from setShadowOffsetY
+      setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }), // Corrected this line
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateImageElement(selectedImageElementId!, { filter: val }),
