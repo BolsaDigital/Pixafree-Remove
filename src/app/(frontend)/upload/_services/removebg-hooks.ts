@@ -22,6 +22,7 @@ export const useRemoveBg = () => {
   const [showOrignal, setShowOrignal] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [progress, setProgress] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null); // Nuevo estado para errores
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -32,16 +33,19 @@ export const useRemoveBg = () => {
     // Check if the file is an image
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       toast.error('Please upload a valid image file.');
-
       return;
     }
 
     const preview = URL.createObjectURL(file);
 
+    // Resetear el resultado y HD URL al cargar una nueva imagen
     setImage({
       image: file,
       preview,
+      result: undefined, // Asegurarse de que el resultado anterior se borre
+      hdUrl: undefined,
     });
+    setError(null); // Limpiar cualquier error anterior
 
     if (inputRef.current) {
       inputRef.current.value = '';
@@ -58,16 +62,19 @@ export const useRemoveBg = () => {
     // Check if the file is an image
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       toast.error('Please upload a valid image file.');
-
       return;
     }
 
     const preview = URL.createObjectURL(file);
 
+    // Resetear el resultado y HD URL al cargar una nueva imagen
     setImage({
       image: file,
       preview,
+      result: undefined, // Asegurarse de que el resultado anterior se borre
+      hdUrl: undefined,
     });
+    setError(null); // Limpiar cualquier error anterior
   };
 
   const onClear = () => {
@@ -75,14 +82,19 @@ export const useRemoveBg = () => {
     setIsLoading(false);
     setShowOrignal(false);
     setProgress(0);
+    setError(null); // Limpiar errores al limpiar
   };
 
   const removeBg = async () => {
-    if (!image) return;
+    if (!image || isLoading) return; // Evitar llamadas duplicadas si ya está cargando
+
     setIsLoading(true);
     setShowOrignal(false);
+    setProgress(0); // Reiniciar el progreso
+    setError(null); // Limpiar errores antes de un nuevo intento
+
     const formData = new FormData();
-    formData.append('image', image?.image as File);
+    formData.append('image', image.image); // Usar image.image directamente
 
     try {
       const response = await axios.post(`${apiUrl}/api/ai/remove-image-bg`, formData, {
@@ -94,14 +106,20 @@ export const useRemoveBg = () => {
         },
       });
       const { data } = response;
-      setImage((prev) => ({
-        ...prev!,
-        result: data,
-      }));
+      // Asegurarse de que 'data' tenga la estructura esperada de RemoveBgResponse
+      if (data && data.preview && data.id) {
+        setImage((prev) => ({
+          ...prev!,
+          result: data, // Asignar la respuesta completa a 'result'
+        }));
+      } else {
+        throw new Error('Invalid response structure from background removal API.');
+      }
     } catch (err: any) {
-      const error = err.response?.data?.message || 'An error occurred';
-      toast.error(error);
-      onClear();
+      const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred during background removal.';
+      toast.error(errorMessage);
+      setError(errorMessage); // Guardar el error en el estado
+      onClear(); // Limpiar el estado en caso de error para permitir un nuevo intento
     } finally {
       setIsLoading(false);
     }
@@ -123,22 +141,43 @@ export const useRemoveBg = () => {
   });
 
   const downloadPremium = async () => {
-    if (!image?.result?.id) return;
-
-    if (image?.hdUrl) {
-      window.open(image.hdUrl, '_blank');
-
+    if (!image?.result?.id) {
+      toast.error('No image result available for premium download.');
       return;
     }
 
-    premiumDownloadMutation.mutate(image?.result?.id);
+    if (image?.hdUrl) {
+      window.open(image.hdUrl, '_blank');
+      return;
+    }
+
+    premiumDownloadMutation.mutate(image.result.id);
   };
 
+  // Este useEffect disparará removeBg cuando se establezca una nueva imagen
   useEffect(() => {
-    if (image && image?.image) {
+    if (image?.image && !image.result && !isLoading) { // Solo si hay una imagen, no hay resultado y no está cargando
       removeBg();
     }
-  }, [image?.image]);
+  }, [image?.image, image?.result, isLoading]); // Dependencias actualizadas
+
+  // Opcional: Un useEffect para reintentar o mostrar un mensaje si el resultado no llega
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (image && image.image && !image.result && !isLoading && !error) {
+      // Si hay una imagen, no hay resultado, no está cargando y no hay error,
+      // esperamos un poco y si sigue sin resultado, mostramos un mensaje o reintentamos.
+      timer = setTimeout(() => {
+        if (image && image.image && !image.result && !isLoading && !error) {
+          toast.warning('Still processing or waiting for result. Please wait or try re-uploading.');
+          // Opcional: podrías llamar a removeBg() de nuevo aquí para un reintento automático
+          // removeBg();
+        }
+      }, 10000); // Esperar 10 segundos
+    }
+    return () => clearTimeout(timer);
+  }, [image, isLoading, error]);
+
 
   return {
     progress,
@@ -153,5 +192,6 @@ export const useRemoveBg = () => {
     inputRef,
     downloadPremium,
     premiumDownloadMutation,
+    error, // Exponer el estado de error
   };
 };
