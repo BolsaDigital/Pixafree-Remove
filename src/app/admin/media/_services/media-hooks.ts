@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, MutableRefObject } from 'react';
 import { toast } from 'sonner';
 
 import { generateRandomKey } from '@/lib/crypto';
-import { SortOrder } from '@/lib/schema';
+import { SortOrder } from '@/lib/schema'; // Asegúrate de que SortOrder sea 'asc' | 'desc'
 
 import mediaActions from './media-actions';
 
@@ -35,7 +35,7 @@ export const useUploadFiles = () => {
   const addFiles = (
     newFiles: File[],
     isCustomBackground: boolean = false, // Nuevo parámetro
-    isPremium: boolean = false           // Nuevo parámetro
+    isPremium: boolean = false          // Nuevo parámetro
   ) => {
     const filteredFiles = newFiles.filter((file) => {
       const ext = file.name.split('.').pop();
@@ -128,8 +128,8 @@ export const useMediaTable = () => {
   const [filters, setFilters] = useState({
     page: 1,
     limit: 15,
-    sort: undefined as string | undefined,
-    order: undefined as SortOrder,
+    sort: 'createdAt' as string, // <--- CORRECCIÓN AQUÍ: Inicializar con un string
+    order: 'desc' as SortOrder, // <--- CORRECCIÓN AQUÍ: Inicializar con un SortOrder
     search: '',
   });
   const queryClient = useQueryClient();
