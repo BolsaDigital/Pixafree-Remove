@@ -176,8 +176,8 @@ export const useMediaTable = () => {
       mediaActions.queryMedia({
         page: filters.page,
         limit: filters.limit,
-        sort: filters.sort,  // Ahora garantizado como string
-        order: filters.order, // Ahora garantizado como SortOrder
+        sort: filters.sort,
+        order: filters.order as SortOrder, // <--- CORRECCIÓN CLAVE AQUÍ: Type assertion
         ...(filters.search && { search: filters.search }),
       }),
   });
