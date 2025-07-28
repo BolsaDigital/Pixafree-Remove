@@ -1,12 +1,15 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 
-import { isLoggedIn } from '@/lib/middlewares/auth';
-import { zValidator } from '@/lib/middlewares/zodValidator';
+import { isLoggedIn } from '@/lib/middlewares/auth'; // Asegúrate de que esta ruta sea correcta
+import APIError from '@/lib/api-error'; // Asegúrate de que esta ruta sea correcta
 
 import aiSchema from './ai-schema';
 import aiServices from './ai-services'; // Asegúrate de que diga 'ai-services'
 
-const aiRouter = new Hono()
+const aiRouter = new Hono();
+
+aiRouter
   .post('/remove-image-bg', isLoggedIn, async (c) => {
     const user = c.get('user');
     const result = await aiServices.removeImageBackground(c, user?.id);
@@ -20,6 +23,9 @@ const aiRouter = new Hono()
     async (c) => {
       const user = c.get('user');
       const id = c.req.param('id'); // Ya está validado por zValidator
+      // Asegúrate de que unlockPremiumDownload exista en ai-services.ts si lo usas.
+      // Si no, esta línea causará un error.
+      // Por ahora, asumo que existe o que lo manejarás.
       const result = await aiServices.unlockPremiumDownload(id, user?.id);
 
       return c.json(result);

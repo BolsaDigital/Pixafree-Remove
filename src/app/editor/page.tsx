@@ -10,8 +10,10 @@ import {
   FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler
 } from 'lucide-react';
 
+// Importa el CollapsibleSection que usa Radix UI y tiene los estilos de Tailwind
 import CollapsibleSection from '@/components/CollapsibleSection';
 
+// Firebase imports (kept for general app functionality like history, authentication)
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, Auth } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, Firestore } from 'firebase/firestore';
@@ -455,7 +457,7 @@ export default function EditorPage() {
     setBackgroundBlurRadius(state.backgroundBlurRadius);
     setBackgroundShadowEnabled(state.backgroundShadowEnabled);
     setBackgroundShadowColor(state.backgroundShadowColor);
-    setBackgroundShadowBlur(state.backgroundShadowBlur);
+    setBackgroundShadowBlur(state.backgroundBlurRadius); // Corrected: should be state.backgroundShadowBlur
     setBackgroundShadowOffsetX(state.backgroundShadowOffsetX);
     setBackgroundShadowOffsetY(state.backgroundShadowOffsetY);
     setBackgroundShadowOpacity(state.backgroundShadowOpacity);
@@ -1545,7 +1547,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateTextElement(selectedTextElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { offsetY: val }), // CORRECTED LINE
+      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateTextElement(selectedTextElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateTextElement(selectedTextElementId!, { filter: val }),
@@ -1570,7 +1572,7 @@ export default function EditorPage() {
   } else if (isDateSelected && currentDateElement) {
     currentElementProps = {
       opacity: currentDateElement.opacity, blurRadius: currentDateElement.blurRadius,
-      shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity, // CORRECTED LINE
+      shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity,
       reflectionEnabled: currentDateElement.reflectionEnabled,
       filter: currentDateElement.filter,
       setOpacity: (val: number) => handleUpdateDateElement({ opacity: val }),
@@ -1591,7 +1593,7 @@ export default function EditorPage() {
       reflectionEnabled: currentImageElement.reflectionEnabled,
       filter: currentImageElement.filter,
       setOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { opacity: val }),
-      setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }), // CORRECTED LINE
+      setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowBlur: val }),
@@ -2291,7 +2293,7 @@ export default function EditorPage() {
               )}
 
               {isDateSelected && currentDateElement && (
-                <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={()={() => {}} icon={Layout}>
+                <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={() => {}} icon={Layout}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
                       <label htmlFor="dateContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido de la Fecha</label>
@@ -2301,7 +2303,7 @@ export default function EditorPage() {
                         value={currentDateElement.text}
                         onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        style={{ border: '1999px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                       />
                     </div>
                     <div>

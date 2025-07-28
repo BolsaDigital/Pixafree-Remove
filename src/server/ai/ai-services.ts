@@ -236,8 +236,45 @@ const generateScene = async (
 
 export type GenerateSceneResponse = Awaited<ReturnType<typeof generateScene>>;
 
+// Asegúrate de que unlockPremiumDownload exista o coméntalo/elimínalo si no lo usas.
+// Si lo tienes en otro archivo de servicios, asegúrate de importarlo o moverlo aquí.
+const unlockPremiumDownload = async (id: string, userId?: string) => {
+  // Implementación de unlockPremiumDownload (ejemplo, ajusta según tu lógica)
+  if (!userId) {
+    throw new APIError('Authentication required to unlock premium download.');
+  }
+
+  const historyEntry = await prisma.history.findUnique({
+    where: { id: id },
+    select: { outputMedia: true, unlocked: true }
+  });
+
+  if (!historyEntry) {
+    throw new APIError('History entry not found.');
+  }
+
+  if (historyEntry.unlocked) {
+    return { url: historyEntry.outputMedia.url, message: 'Download already unlocked.' };
+  }
+
+  // Lógica para verificar créditos o suscripción premium y desbloquear
+  // Por ejemplo, descontar créditos o verificar estado premium del usuario
+  const userCredits = await creditServices.getUserCredits(userId);
+  if (userCredits && userCredits.credits > 0) { // Ejemplo: requiere 1 crédito
+    await creditServices.decreaseCredits(userId, 1); // Descuenta 1 crédito
+    await prisma.history.update({
+      where: { id: id },
+      data: { unlocked: true }
+    });
+    return { url: historyEntry.outputMedia.url, message: 'Download unlocked successfully.' };
+  } else {
+    throw new APIError('Not enough credits or premium subscription not found to unlock download.');
+  }
+};
+
+
 export default {
   removeImageBackground,
-  unlockPremiumDownload,
+  unlockPremiumDownload, 
   generateScene,
 };

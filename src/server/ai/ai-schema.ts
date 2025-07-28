@@ -1,21 +1,21 @@
 import { z } from 'zod';
 
-const unlockPremiumSchema = z.object({
-  id: z.string().nonempty(),
+export const removeBgSchema = z.object({
+  image: z.instanceof(File),
 });
 
-// Nuevo esquema para la generación de escenas
-const generateSceneInputSchema = z.object({
+export const unlockPremiumSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+});
+
+export const generateSceneSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
-  // La imagen de referencia se enviará como un archivo en FormData,
-  // pero si la pasáramos como base64 en JSON, este sería el tipo.
-  // Para Hono con FormData, la validación se hará en la ruta.
-  // Aquí solo definimos la estructura lógica.
+  referenceImageBase64: z.string().optional(), // Base64 de la imagen de referencia (opcional)
 });
 
-const aiSchema = {
+// Exporta todos los esquemas para que puedan ser importados como un objeto
+export default {
+  removeBgSchema,
   unlockPremiumSchema,
-  generateSceneInputSchema, // Añadido
+  generateSceneSchema,
 };
-
-export default aiSchema;
