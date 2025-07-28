@@ -4,7 +4,7 @@ import { isLoggedIn } from '@/lib/middlewares/auth';
 import { zValidator } from '@/lib/middlewares/zodValidator';
 
 import aiSchema from './ai-schema';
-import aiServices from './ai-sevices';
+import aiServices from './ai-services';
 
 const aiRouter = new Hono()
   .post('/remove-image-bg', isLoggedIn, async (c) => {
