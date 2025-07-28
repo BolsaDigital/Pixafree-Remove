@@ -15,6 +15,20 @@ import { useMediaTable } from '../_services/media-hooks';
 import PreviewMediaDialog from './preview-media';
 import UploadDialog from './upload-dialog';
 
+// Define una interfaz para el tipo de datos 'Media' que incluye los nuevos campos
+// Esto es importante para el tipado correcto, aunque en runtime ya existen.
+interface MediaRecord {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  isCustomBackground?: boolean; // Añadido
+  isPremium?: boolean; // Añadido
+}
+
 const MediaTable = ({
   onSelect,
   allowTypes,
@@ -69,7 +83,7 @@ const MediaTable = ({
               }
             : undefined
         }
-        onClickRow={(record) => {
+        onClickRow={(record: MediaRecord) => { // Usar MediaRecord aquí
           if (onSelect) {
             if (allowTypes && !allowTypes.find((type) => record.mimeType.startsWith(type))) {
               toast.error(`Only ${allowTypes.join(', ')} files are allowed.`);
@@ -87,7 +101,7 @@ const MediaTable = ({
             key: 'name',
             sortable: true,
             maxWidth: 250,
-            render(value, record) {
+            render(value: string, record: MediaRecord) { // Usar MediaRecord aquí
               return (
                 <div className="flex items-center">
                   {record.mimeType.startsWith('image') ? (
@@ -136,13 +150,44 @@ const MediaTable = ({
           {
             title: 'Size',
             key: 'size',
-            render: (value) => <>{formatFileSize(value)}</>,
+            render: (value: number) => <>{formatFileSize(value)}</>,
             sortable: true,
+          },
+          // NUEVA COLUMNA: Estado Editor
+          {
+            title: 'Estado Editor',
+            key: 'editorStatus',
+            render: (value: any, record: MediaRecord) => { // Usar MediaRecord aquí
+              if (record.isCustomBackground) {
+                return (
+                  <div className="flex flex-col items-start space-y-1">
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                      Fondo Personalizado
+                    </span>
+                    {record.isPremium ? (
+                      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+                        Premium
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        Gratis
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                  No es Fondo
+                </span>
+              );
+            },
+            sortable: false, // No se puede ordenar por este campo directamente
           },
           {
             title: 'Created At',
             key: 'createdAt',
-            render: (value) => (
+            render: (value: string) => (
               <Moment format="DD/MM/YYYY" className="text-[13px]">
                 {value}
               </Moment>
@@ -152,7 +197,7 @@ const MediaTable = ({
           {
             title: 'Updated At',
             key: 'updatedAt',
-            render: (value) => (
+            render: (value: string) => (
               <Moment format="DD/MM/YYYY" className="text-[13px]">
                 {value}
               </Moment>
