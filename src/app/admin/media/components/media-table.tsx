@@ -11,23 +11,19 @@ import DeleteAlert from '@/components/ui/delete-alert';
 
 import { formatFileSize } from '@/lib/utils';
 
+// Importa el tipo Media directamente de Prisma Client para mayor precisión
+import { Media } from '@prisma/client';
+
 import { useMediaTable } from '../_services/media-hooks';
 import PreviewMediaDialog from './preview-media';
 import UploadDialog from './upload-dialog';
 
-// Define una interfaz para el tipo de datos 'Media' que incluye los nuevos campos
-// Esto es importante para el tipado correcto, aunque en runtime ya existen.
-interface MediaRecord {
-  id: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  url: string;
-  createdAt: string;
-  updatedAt: string;
-  isCustomBackground?: boolean; // Añadido
-  isPremium?: boolean; // Añadido
-}
+// Usa el tipo Media de Prisma directamente para MediaRecord
+// Esto asegura que todas las propiedades necesarias estén presentes.
+// Si necesitas propiedades opcionales, puedes hacerlas opcionales aquí,
+// pero es mejor que coincida con el modelo de Prisma.
+interface MediaRecord extends Media {}
+
 
 const MediaTable = ({
   onSelect,
@@ -187,7 +183,7 @@ const MediaTable = ({
           {
             title: 'Created At',
             key: 'createdAt',
-            render: (value: string) => (
+            render: (value: Date) => ( // Cambiado a Date
               <Moment format="DD/MM/YYYY" className="text-[13px]">
                 {value}
               </Moment>
@@ -197,7 +193,7 @@ const MediaTable = ({
           {
             title: 'Updated At',
             key: 'updatedAt',
-            render: (value: string) => (
+            render: (value: Date) => ( // Cambiado a Date
               <Moment format="DD/MM/YYYY" className="text-[13px]">
                 {value}
               </Moment>
