@@ -1,5 +1,5 @@
 // src/app/editor/page.tsx
-'use client'; // <--- ¡ESTA LÍNEA DEBE SER LA PRIMERA Y ÚNICA ANTES DE CUALQUIER OTRA COSA!
+'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -10,10 +10,8 @@ import {
   FlipHorizontal, FlipVertical, Droplet, Sun, Contrast, Palette as PaletteIcon, ChevronRight, ChevronLeft, Settings, MoreHorizontal, Ruler
 } from 'lucide-react';
 
-// Importa el CollapsibleSection que usa Radix UI y tiene los estilos de Tailwind
 import CollapsibleSection from '@/components/CollapsibleSection';
 
-// Firebase imports (kept for general app functionality like history, authentication)
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, Auth } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, Firestore } from 'firebase/firestore';
@@ -952,20 +950,22 @@ export default function EditorPage() {
     }
 
     setIsGeneratingScene(true);
-    // Add a loading image to the canvas immediately
-    const loadingImageId = `image-${Date.now()}`;
+    // Eliminar cualquier imagen de carga previa si existe
+    setImageElements((prev) => prev.filter(img => !img.url.includes('Generando...')));
+
+    // Añadir una imagen de carga al canvas
+    const loadingImageId = `loading-image-${Date.now()}`;
     const loadingImage: ImageElement = {
       id: loadingImageId,
       url: `https://placehold.co/200x200/eeeeee/333333?text=Generando...`,
-      x: 0, // Will be centered by CanvasImageElement after load
-      y: 0, // Will be centered by CanvasImageElement after load
+      x: CANVAS_SIZE / 2, // Centrar la imagen de carga
+      y: CANVAS_SIZE / 2, // Centrar la imagen de carga
       scaleX: 1, scaleY: 1, rotation: 0, opacity: 1, blurRadius: 0, shadowEnabled: false, reflectionEnabled: false, flipX: 1, flipY: 1, filter: 'none',
       shadowColor: '#000000', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, shadowOpacity: 0.5,
       width: undefined, height: undefined,
     };
     setImageElements((prev) => [...prev, loadingImage]);
-    handleElementSelect('image', loadingImage.id); // Select the loading image
-    setImageToMoveToBottomId(loadingImage.id); // Request to move this new image to bottom
+    // No seleccionar la imagen de carga, ni moverla al fondo, ya que será reemplazada o eliminada.
 
     let finalPrompt = scenePrompt;
     const geminiApiKey = ""; // API key will be provided by Canvas runtime for Gemini calls
@@ -974,16 +974,15 @@ export default function EditorPage() {
       if (aiReferenceImageFile) {
         const reader = new FileReader();
         reader.readAsDataURL(aiReferenceImageFile);
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
           reader.onloadend = resolve;
+          reader.onerror = reject;
         });
 
         if (reader.result === null || typeof reader.result !== 'string') {
           console.error("FileReader.result es null o no es una cadena.");
           alert('Error al leer la imagen de referencia. Intenta con otra imagen.');
-          setIsGeneratingScene(false);
-          setImageElements((prev) => prev.filter(img => img.id !== loadingImageId)); // Elimina la imagen de carga
-          return;
+          return; // Sale de la función
         }
         const base64ImageData = reader.result.split(',')[1];
 
@@ -993,7 +992,7 @@ export default function EditorPage() {
             {
               role: "user",
               parts: [
-                { text: "Describe this image in detail, focusing on its main subject, colors, and overall style, to be used as context for generating a new scene." },
+                { text: `Describe esta imagen en detalle, enfocándote en su sujeto principal, colores, estilo general y cualquier detalle relevante para incorporarla en una escena más grande. Por ejemplo, si es un reloj, describe su forma, color, material, si tiene detalles específicos. Esta descripción se usará como contexto para generar una nueva escena. NO menciones el fondo de la imagen original, solo el objeto.` },
                 {
                   inlineData: {
                     mimeType: aiReferenceImageFile.type,
@@ -1015,22 +1014,24 @@ export default function EditorPage() {
 
         if (geminiResult.candidates && geminiResult.candidates.length > 0 && geminiResult.candidates[0].content && geminiResult.candidates[0].content.parts && geminiResult.candidates[0].content.parts.length > 0) {
           const descriptionFromAI = geminiResult.candidates[0].content.parts[0].text;
-          finalPrompt = `${scenePrompt}. La escena debe incorporar elementos sugeridos por la siguiente descripción de imagen: ${descriptionFromAI}`;
+          // Combinar el prompt del usuario con la descripción de la IA para la imagen de referencia
+          finalPrompt = `${scenePrompt}. La escena debe incorporar el siguiente objeto, descrito como: ${descriptionFromAI}.`;
+          console.log("Combined prompt for Replicate:", finalPrompt);
         } else {
-          console.warn('No se pudo obtener la descripción de Gemini, se procederá solo con el prompt de texto.');
+          console.warn('No se pudo obtener la descripción de Gemini, se procederá solo con el prompt de texto del usuario.');
         }
       }
 
-      // --- NUEVO: Llamada a tu API de backend para Replicate ---
+      // --- Llamada a tu API de backend para Replicate ---
       const formData = new FormData();
       formData.append('prompt', finalPrompt);
-      if (aiReferenceImageFile) {
-        formData.append('referenceImage', aiReferenceImageFile); // Envía el archivo real
-      }
+      // No enviamos la imagen de referencia directamente a Replicate vía este endpoint,
+      // ya que la descripción de Gemini se incorporó al prompt.
+      // Si el modelo de Replicate en el backend soportara init_image, se enviaría aquí.
 
-      const backendResponse = await fetch('/api/ai/generate-scene', { // Tu nuevo endpoint de API de backend
+      const backendResponse = await fetch('/api/ai/generate-scene', {
         method: 'POST',
-        body: formData, // Envía como FormData
+        body: formData,
       });
 
       const backendResult = await backendResponse.json();
@@ -1041,29 +1042,34 @@ export default function EditorPage() {
 
       // Asumiendo que backendResult contiene { url: string }
       if (backendResult.url) {
-        const imageUrl = backendResult.url;
-        setImageElements((prev) => prev.map(img =>
-          img.id === loadingImageId ? { ...img, url: imageUrl, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
-        ));
-        onTransformEndCommit(); // Guarda el estado después de cargar la imagen de IA
+        const generatedImageUrl = backendResult.url;
+        // Establecer la imagen generada por IA como el fondo principal del canvas
+        setSelectedPresetBackgroundUrl(generatedImageUrl);
+        // Resetear propiedades del fondo para que se vea bien
+        setBackgroundOpacity(1);
+        setBackgroundBlurRadius(0);
+        setBackgroundShadowEnabled(false); setBackgroundShadowColor('#000000'); setBackgroundShadowBlur(0); setBackgroundShadowOffsetX(0); setBackgroundShadowOffsetY(0); setBackgroundShadowOpacity(0.5);
+        setBackgroundReflectionEnabled(false);
+        setBackgroundFlipX(1); setBackgroundFlipY(1);
+        setBackgroundFilter('none');
+        onTransformEndCommit(); // Guarda el estado después de cambiar el fondo
+
+        // Eliminar la imagen de carga del lienzo
+        setImageElements((prev) => prev.filter(img => img.id !== loadingImageId));
+        alert('Escena generada y aplicada como fondo exitosamente.');
+
       } else {
         alert('No se pudo generar la escena. Intenta con otra descripción.');
-        console.error('Error de respuesta del backend para la escena AI:', backendResult);
-        // Actualiza la imagen de carga a estado de error
-        setImageElements((prev) => prev.map(img =>
-          img.id === loadingImageId ? { ...img, url: `https://placehold.co/200x200/ff0000/ffffff?text=Error+AI`, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
-        ));
+        console.error('Error de respuesta del backend para la escena AI: URL no encontrada', backendResult);
       }
 
     } catch (error) {
       console.error('Error al generar la escena con IA:', error);
       alert('Ocurrió un error al generar la escena con IA. Por favor, inténtalo de nuevo más tarde.');
-      // Actualiza la imagen de carga a estado de error
-      setImageElements((prev) => prev.map(img =>
-        img.id === loadingImageId ? { ...img, url: `https://placehold.co/200x200/ff0000/ffffff?text=Error+AI`, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
-      ));
     } finally {
       setIsGeneratingScene(false);
+      // Asegurarse de eliminar la imagen de carga en cualquier caso
+      setImageElements((prev) => prev.filter(img => img.id !== loadingImageId));
     }
   };
 
@@ -2285,7 +2291,7 @@ export default function EditorPage() {
               )}
 
               {isDateSelected && currentDateElement && (
-                <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={() => {}} icon={Layout}>
+                <CollapsibleSection title="Propiedades de la Fecha" isOpen={true} setIsOpen={()={() => {}} icon={Layout}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
                       <label htmlFor="dateContent" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Contenido de la Fecha</label>

@@ -3,8 +3,8 @@ import prisma from '@/config/prisma';
 import sizeOf from 'buffer-image-size';
 import { Context, Env } from 'hono';
 import moment from 'moment';
-import fetch from 'node-fetch'; // Asegúrate de que node-fetch esté instalado: npm install node-fetch
-import sharp from 'sharp'; // Asegúrate de que sharp esté instalado: npm install sharp
+import fetch from 'node-fetch';
+import sharp from 'sharp';
 
 import APIError from '@/lib/api-error';
 import { getUploadSizeInBytes } from '@/lib/utils';
@@ -14,7 +14,7 @@ import mediaServices from '../media/media-services';
 import { getSettings } from '../settings/setting-services';
 import subscriptionServices from '../subscriptions/subscription-services';
 
-import Replicate from 'replicate'; // Importa la librería de Replicate
+import Replicate from 'replicate';
 
 const removeImageBackground = async (c: Context<Env, string>, userId?: string) => {
   const body = await c.req.parseBody();
@@ -89,7 +89,7 @@ const removeImageBackground = async (c: Context<Env, string>, userId?: string) =
 
   const outputUrl = responseData?.output;
   if (!outputUrl) {
-    console.error('Error removing image background:', responseData);
+    console.error('Error removing image background: No output URL received', responseData);
     throw new APIError('Error removing image background. Please try again later.');
   }
 
@@ -147,7 +147,6 @@ const removeImageBackground = async (c: Context<Env, string>, userId?: string) =
 
 export type RemoveBgResponse = Awaited<ReturnType<typeof removeImageBackground>>;
 
-
 // Nueva función para generar escenas con IA usando Replicate
 const generateScene = async (
   prompt: string,
@@ -164,35 +163,37 @@ const generateScene = async (
   });
 
   // Modelo de Replicate para generación de imágenes (Stable Diffusion XL)
-  // Puedes cambiar este modelo si encuentras uno más adecuado para tus necesidades.
-  // Este modelo toma un prompt de texto y genera una imagen.
+  // Este modelo es bueno para texto a imagen. Para "reloj en persona",
+  // un modelo de ControlNet sería más adecuado, pero requiere más complejidad.
+  // Por ahora, nos enfocamos en que genere un fondo coherente.
   const model = "stability-ai/stable-diffusion-xl";
   const version = "39ed52f2a78e934ba35e2ce05cd5f6dcce5bc54203bc76bbcc7e10b963482a2d"; // Última versión estable al momento de escribir
 
   const input: { prompt: string; image?: string; } = {
     prompt: prompt,
+    // Si el modelo de Replicate que elijas soporta 'init_image' para image-to-image,
+    // y quieres usar la imagen de referencia directamente, la añadirías aquí.
+    // Por ahora, Stable Diffusion XL es principalmente texto a imagen.
+    // La descripción de Gemini ya se incorpora en el 'prompt'.
+    // Si usaras un modelo como 'stability-ai/stable-diffusion-img2img', podrías usar:
+    // init_image: referenceImageBase64,
+    // prompt: prompt,
+    // strength: 0.8, // Qué tan fuerte se adhiere a la imagen de entrada
   };
 
-  // Si el modelo de Replicate que elijas soporta 'init_image' para image-to-image,
-  // y quieres usar la imagen de referencia directamente, la añadirías aquí.
-  // Por ahora, asumimos que el frontend ya ha incorporado la descripción de la imagen
-  // de referencia en el 'prompt' si se usó Gemini.
-  // Ejemplo si el modelo soportara init_image:
-  // if (referenceImageBase64) {
-  //   input.image = referenceImageBase64;
-  // }
-
   console.log("Calling Replicate for scene generation with prompt:", prompt);
+  if (referenceImageBase64) {
+    console.log("Reference image provided (base64).");
+  }
 
   try {
-    // Replicate's API client automáticamente maneja el polling para el resultado final.
     const prediction = await replicate.predictions.create({
       model: model,
       version: version,
       input: input,
     });
 
-    // Esperar a que la predicción termine. El cliente de Replicate lo hace automáticamente.
+    // Replicate's API client automáticamente maneja el polling para el resultado final.
     const result = await replicate.predictions.get(prediction.id);
 
     if (result.status !== 'succeeded' || !result.output || result.output.length === 0) {
@@ -208,13 +209,19 @@ const generateScene = async (
       throw new APIError('Failed to download generated image from Replicate.');
     }
     const imageBuffer = await imageResponse.arrayBuffer();
-    const generatedFile = new File([imageBuffer], `ai-scene-${Date.now()}.png`, {
-      type: 'image/png', // Replicate suele generar PNGs
+    
+    // Generar un nombre de archivo único
+    const uniqueFileName = `ai-scene-${Date.now()}.png`;
+
+    // Crear un File object para uploadMedia
+    const generatedFile = new File([imageBuffer], uniqueFileName, {
+      type: 'image/png',
       lastModified: Date.now(),
     });
 
     // Subir la imagen generada usando tu servicio de medios existente
-    // La marcamos como libraryMedia: true, isCustomBackground: true, isPremium: false por defecto.
+    // La marcamos como libraryMedia: true, isCustomBackground: true, isPremium: false
+    // para que aparezca en los fondos preestablecidos del editor.
     const uploadedMedia = await mediaServices.uploadMedia(generatedFile, userId, true, true, false);
 
     // Puedes guardar un registro de esta generación en tu historial si lo deseas
@@ -232,5 +239,5 @@ export type GenerateSceneResponse = Awaited<ReturnType<typeof generateScene>>;
 export default {
   removeImageBackground,
   unlockPremiumDownload,
-  generateScene, // Añadir la nueva función
+  generateScene,
 };
