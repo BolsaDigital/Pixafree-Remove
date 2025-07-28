@@ -120,8 +120,8 @@ export const useUploadFiles = () => {
 };
 
 // Importa el tipo inferido de Zod para los filtros de consulta
-import { mediaQuerySchema } from '@/server/media/media-schema';
-type MediaFilters = z.infer<typeof mediaQuerySchema>; // <--- CORRECCIÓN CLAVE AQUÍ: Usar z.infer directamente
+import mediaSchema from '@/server/media/media-schema'; // <--- CORRECCIÓN AQUÍ: Importación por defecto
+type MediaFilters = z.infer<typeof mediaSchema.mediaQuerySchema>; // <--- CORRECCIÓN AQUÍ: Acceder a través del objeto por defecto
 
 export const useMediaTable = () => {
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
@@ -143,11 +143,18 @@ export const useMediaTable = () => {
 
   // Ajusta setFilter para que sea más flexible con Partial
   const setFilter = (filter: Partial<MediaFilters>) => {
-    setFilters((prev) => ({
-      ...prev,
-      page: 1,
-      ...filter,
-    }));
+    setFilters((prev) => {
+      const newFilters = { ...prev, page: 1, ...filter };
+
+      // Asegura que sort y order siempre sean string y SortOrder, respectivamente.
+      // Si filter.sort/order es undefined, se usa el valor previo (que ya es válido).
+      // Si filter.sort/order es un string/SortOrder, se usa ese valor.
+      // Esto evita que el tipo se convierta en 'string | undefined' o 'SortOrder | undefined'.
+      newFilters.sort = filter.sort !== undefined ? filter.sort : prev.sort;
+      newFilters.order = filter.order !== undefined ? filter.order : prev.order;
+
+      return newFilters;
+    });
   };
 
   const deleteMedia = useMutation({
@@ -171,8 +178,8 @@ export const useMediaTable = () => {
         // Pasa directamente los filtros. mediaActions.queryMedia se encargará de parsear con Zod.
         ...filters,
         // Si necesitas pasar isCustomBackground o isPremium para esta tabla específica,
-        // agrégalos aquí. Por ejemplo, si esta tabla siempre debe mostrar solo ciertos tipos de medios.
-        // isCustomBackground: true, // Ejemplo: si la tabla solo muestra fondos personalizados
+        // agrégalos aquí. Por ejemplo, si esta tabla siempre debe mostrar solo fondos personalizados
+        // isCustomBackground: true,
       }),
   });
 
