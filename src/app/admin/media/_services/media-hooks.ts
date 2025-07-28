@@ -119,23 +119,41 @@ export const useUploadFiles = () => {
   };
 };
 
+// Define una interfaz precisa para los filtros
+interface MediaFilters {
+  page: number;
+  limit: number;
+  sort: string; // Siempre será un string
+  order: SortOrder; // Siempre será 'asc' o 'desc'
+  search: string;
+}
+
 export const useMediaTable = () => {
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
   const [preview, setPreview] = useState<Media | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [filters, setFilters] = useState({
+  // Inicializa filters con el tipo MediaFilters
+  const [filters, setFilters] = useState<MediaFilters>({
     page: 1,
     limit: 15,
-    sort: 'createdAt' as string, // <--- CORRECCIÓN AQUÍ: Inicializar con un string
-    order: 'desc' as SortOrder, // <--- CORRECCIÓN AQUÍ: Inicializar con un SortOrder
+    sort: 'createdAt', // Valor por defecto
+    order: 'desc',     // Valor por defecto
     search: '',
   });
   const queryClient = useQueryClient();
 
-  const setFilter = (filter: Partial<typeof filters>) => {
-    setFilters((prev) => ({ ...prev, page: 1, ...filter }));
+  // Ajusta setFilter para asegurar que 'sort' y 'order' siempre sean del tipo correcto
+  const setFilter = (filter: Partial<MediaFilters>) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      ...filter,
+      // Asegura que sort y order mantengan sus valores por defecto si no se proporcionan en el filtro parcial
+      sort: filter.sort !== undefined ? filter.sort : prev.sort,
+      order: filter.order !== undefined ? filter.order : prev.order,
+    }));
   };
 
   const deleteMedia = useMutation({
@@ -158,8 +176,8 @@ export const useMediaTable = () => {
       mediaActions.queryMedia({
         page: filters.page,
         limit: filters.limit,
-        sort: filters.sort,
-        order: filters.order,
+        sort: filters.sort,  // Ahora garantizado como string
+        order: filters.order, // Ahora garantizado como SortOrder
         ...(filters.search && { search: filters.search }),
       }),
   });
