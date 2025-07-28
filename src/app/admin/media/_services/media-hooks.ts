@@ -124,7 +124,7 @@ interface MediaFilters {
   page: number;
   limit: number;
   sort: string; // Siempre será un string
-  order: SortOrder | undefined; // <--- CORRECCIÓN AQUÍ: Ahora puede ser undefined
+  order: SortOrder; // <--- CORRECCIÓN AQUÍ: Ahora es estrictamente SortOrder
   search: string;
 }
 
@@ -146,15 +146,18 @@ export const useMediaTable = () => {
 
   // Ajusta setFilter para asegurar que 'sort' y 'order' siempre sean del tipo correcto
   const setFilter = (filter: Partial<MediaFilters>) => {
-    setFilters((prev) => ({
-      ...prev,
-      page: 1,
-      ...filter,
-      // Asegura que sort y order mantengan sus valores por defecto si no se proporcionan en el filtro parcial
-      // o que se actualicen si se proporcionan.
-      sort: filter.sort !== undefined ? filter.sort : prev.sort,
-      order: filter.order !== undefined ? filter.order : prev.order,
-    }));
+    setFilters((prev) => {
+      const newFilters = { ...prev, page: 1, ...filter };
+
+      // Asegura que sort y order siempre sean string y SortOrder, respectivamente.
+      // Si filter.sort/order es undefined, se usa el valor previo (que ya es válido).
+      // Si filter.sort/order es un string/SortOrder, se usa ese valor.
+      // Esto evita que el tipo se convierta en 'string | undefined' o 'SortOrder | undefined'.
+      newFilters.sort = filter.sort !== undefined ? filter.sort : prev.sort;
+      newFilters.order = filter.order !== undefined ? filter.order : prev.order;
+
+      return newFilters;
+    });
   };
 
   const deleteMedia = useMutation({
