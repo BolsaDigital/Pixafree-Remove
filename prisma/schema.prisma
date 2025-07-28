@@ -9,22 +9,22 @@ datasource db {
 }
 
 model User {
-  id               String         @id @default(cuid())
-  avatar           String?
-  name             String
-  email            String
-  password         String
-  emailVerified    Boolean        @default(false)
-  role             UserRole       @default(user)
-  stripeCustomerId String?        @unique
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  Session          Session[]
-  Verification     Verification[]
-  Media            Media[]
-  Subscription     Subscription[]
-  Credits          Credits[]
-  History          History[]
+  id                String         @id @default(cuid())
+  avatar            String?
+  name              String
+  email             String
+  password          String
+  emailVerified     Boolean        @default(false)
+  role              UserRole       @default(user)
+  stripeCustomerId  String?        @unique
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  Session           Session[]
+  Verification      Verification[]
+  Media             Media[]
+  Subscription      Subscription[]
+  Credits           Credits[]
+  History           History[]
 
   @@unique([email])
   @@index([createdAt])
@@ -53,14 +53,14 @@ model Session {
 }
 
 model Verification {
-  id        String           @id @default(cuid())
+  id        String         @id @default(cuid())
   userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      VerificationType
   token     String
   expiresAt DateTime
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@unique([token])
   @@index([createdAt])
@@ -85,22 +85,24 @@ model Setting {
 }
 
 model Media {
-  id               String    @id @default(cuid())
-  userId           String?
-  user             User?     @relation(fields: [userId], references: [id])
-  name             String
-  mimeType         String
-  size             Int
-  storageType      String
-  url              String
-  key              String
-  fileName         String
-  libraryMedia     Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  inputHistories   History[] @relation("HistoryInputMedia")
-  previewHistories History[] @relation("HistoryPreviewMedia")
-  outputHistories  History[] @relation("HistoryOutputMedia")
+  id                String    @id @default(cuid())
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id])
+  name              String
+  mimeType          String
+  size              Int
+  storageType       String
+  url               String
+  key               String
+  fileName          String
+  libraryMedia      Boolean   @default(false)
+  isCustomBackground Boolean @default(false) // <--- ¡CAMPO AÑADIDO!
+  isPremium         Boolean @default(false) // <--- ¡CAMPO AÑADIDO!
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  inputHistories    History[] @relation("HistoryInputMedia")
+  previewHistories  History[] @relation("HistoryPreviewMedia")
+  outputHistories   History[] @relation("HistoryOutputMedia")
 
   @@index([createdAt])
   @@map("media")
@@ -167,16 +169,16 @@ enum SubscriptionStatus {
 }
 
 model Subscription {
-  id                 String             @id @default(cuid())
-  userId             String             @unique
-  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String           @id @default(cuid())
+  userId             String           @unique
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   planId             String
-  plan               BillingPlan        @relation(fields: [planId], references: [id])
+  plan               BillingPlan      @relation(fields: [planId], references: [id])
   status             SubscriptionStatus
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([createdAt])
   @@index([updatedAt])
