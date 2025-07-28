@@ -1,6 +1,6 @@
 import { ALLOWED_IMAGE_TYPES } from '@/config/constants';
 import { queryKeys } from '@/config/queryKeys';
-import { RemoveBgResponse } from '@/server/ai/ai-sevices';
+import { RemoveBgResponse } from '@/server/ai/ai-services';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import React, { useEffect } from 'react';
