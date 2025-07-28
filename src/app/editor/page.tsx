@@ -1558,7 +1558,7 @@ export default function EditorPage() {
   } else if (isDateSelected && currentDateElement) {
     currentElementProps = {
       opacity: currentDateElement.opacity, blurRadius: currentDateElement.blurRadius,
-      shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity,
+      shadowEnabled: currentDateElement.shadowEnabled, shadowColor: currentDateElement.shadowColor, shadowBlur: currentDateElement.shadowBlur, shadowOffsetX: currentDateElement.shadowOffsetX, shadowOffsetY: currentDateElement.shadowOffsetY, shadowOpacity: currentDateElement.shadowOpacity, // CORRECTED LINE
       reflectionEnabled: currentDateElement.reflectionEnabled,
       filter: currentDateElement.filter,
       setOpacity: (val: number) => handleUpdateDateElement({ opacity: val }),
@@ -1582,7 +1582,7 @@ export default function EditorPage() {
       setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
       setShadowEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
-      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
+      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
       setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
