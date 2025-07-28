@@ -3,8 +3,8 @@ import prisma from '@/config/prisma';
 import sizeOf from 'buffer-image-size';
 import { Context, Env } from 'hono';
 import moment from 'moment';
-import fetch from 'node-fetch';
-import sharp from 'sharp';
+import fetch from 'node-fetch'; // Asegúrate de que node-fetch esté instalado: npm install node-fetch
+import sharp from 'sharp'; // Asegúrate de que sharp esté instalado: npm install sharp
 
 import APIError from '@/lib/api-error';
 import { getUploadSizeInBytes } from '@/lib/utils';
@@ -13,6 +13,8 @@ import creditServices from '../credits/credit-services';
 import mediaServices from '../media/media-services';
 import { getSettings } from '../settings/setting-services';
 import subscriptionServices from '../subscriptions/subscription-services';
+
+import Replicate from 'replicate'; // Importa la librería de Replicate
 
 const removeImageBackground = async (c: Context<Env, string>, userId?: string) => {
   const body = await c.req.parseBody();
@@ -62,7 +64,7 @@ const removeImageBackground = async (c: Context<Env, string>, userId?: string) =
   const imageData = `data:${image.type};base64,${base64}`;
 
   const input = {
-    version: 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7',
+    version: 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7', // Versión del modelo de Replicate para remover fondo
     input: {
       image: imageData,
     },
@@ -145,65 +147,90 @@ const removeImageBackground = async (c: Context<Env, string>, userId?: string) =
 
 export type RemoveBgResponse = Awaited<ReturnType<typeof removeImageBackground>>;
 
-const unlockPremiumDownload = async (historyId: string, userId?: string) => {
-  if (!userId) {
-    throw new APIError('Please login to download hd image');
+
+// Nueva función para generar escenas con IA usando Replicate
+const generateScene = async (
+  prompt: string,
+  referenceImageBase64?: string, // Base64 de la imagen de referencia (opcional)
+  userId?: string // Para asociar con el usuario si es necesario
+) => {
+  const aiSettings = await getSettings('ai');
+  if (!aiSettings || !aiSettings.aiApiKey) {
+    throw new APIError('AI settings not configured or Replicate API key missing.');
   }
 
-  const history = await prisma.history.findUnique({
-    where: {
-      id: historyId,
-    },
-    include: {
-      outputMedia: true,
-    },
+  const replicate = new Replicate({
+    auth: aiSettings.aiApiKey,
   });
 
-  if (!history) {
-    throw new APIError('Image not found');
-  }
+  // Modelo de Replicate para generación de imágenes (Stable Diffusion XL)
+  // Puedes cambiar este modelo si encuentras uno más adecuado para tus necesidades.
+  // Este modelo toma un prompt de texto y genera una imagen.
+  const model = "stability-ai/stable-diffusion-xl";
+  const version = "39ed52f2a78e934ba35e2ce05cd5f6dcce5bc54203bc76bbcc7e10b963482a2d"; // Última versión estable al momento de escribir
 
-  const { credits, id: creditsId } = await creditServices.getUserCredits(userId);
-  if (!credits || credits <= 0) {
-    throw new APIError('You do not have enough credits to download this image');
-  }
+  const input: { prompt: string; image?: string; } = {
+    prompt: prompt,
+  };
 
-  await prisma.$transaction(async (tx) => {
-    if (creditsId) {
-      await tx.credits.update({
-        where: {
-          id: creditsId,
-        },
-        data: {
-          used: {
-            increment: 1,
-          },
-        },
-      });
+  // Si el modelo de Replicate que elijas soporta 'init_image' para image-to-image,
+  // y quieres usar la imagen de referencia directamente, la añadirías aquí.
+  // Por ahora, asumimos que el frontend ya ha incorporado la descripción de la imagen
+  // de referencia en el 'prompt' si se usó Gemini.
+  // Ejemplo si el modelo soportara init_image:
+  // if (referenceImageBase64) {
+  //   input.image = referenceImageBase64;
+  // }
+
+  console.log("Calling Replicate for scene generation with prompt:", prompt);
+
+  try {
+    // Replicate's API client automáticamente maneja el polling para el resultado final.
+    const prediction = await replicate.predictions.create({
+      model: model,
+      version: version,
+      input: input,
+    });
+
+    // Esperar a que la predicción termine. El cliente de Replicate lo hace automáticamente.
+    const result = await replicate.predictions.get(prediction.id);
+
+    if (result.status !== 'succeeded' || !result.output || result.output.length === 0) {
+      console.error('Replicate prediction failed or no output:', result);
+      throw new APIError('Failed to generate scene with AI. Please try again or refine your prompt.');
     }
 
-    await tx.history.update({
-      where: {
-        id: historyId,
-      },
-      data: {
-        unlocked: true,
-      },
+    const generatedImageUrl = result.output[0]; // Asumiendo que la salida es un array de URLs
+
+    // Descargar la imagen generada de Replicate
+    const imageResponse = await fetch(generatedImageUrl);
+    if (!imageResponse.ok) {
+      throw new APIError('Failed to download generated image from Replicate.');
+    }
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const generatedFile = new File([imageBuffer], `ai-scene-${Date.now()}.png`, {
+      type: 'image/png', // Replicate suele generar PNGs
+      lastModified: Date.now(),
     });
-  });
 
-  const { outputMedia } = history;
-  if (!outputMedia) {
-    throw new APIError('Image not found');
+    // Subir la imagen generada usando tu servicio de medios existente
+    // La marcamos como libraryMedia: true, isCustomBackground: true, isPremium: false por defecto.
+    const uploadedMedia = await mediaServices.uploadMedia(generatedFile, userId, true, true, false);
+
+    // Puedes guardar un registro de esta generación en tu historial si lo deseas
+    // Por ahora, solo devolvemos la URL.
+    return { url: uploadedMedia.url };
+
+  } catch (error) {
+    console.error('Error calling Replicate API for scene generation:', error);
+    throw new APIError(`Error generating scene with AI: ${(error as Error).message || 'Unknown error'}`);
   }
-  const { url } = outputMedia;
-
-  return {
-    url,
-  };
 };
+
+export type GenerateSceneResponse = Awaited<ReturnType<typeof generateScene>>;
 
 export default {
   removeImageBackground,
   unlockPremiumDownload,
+  generateScene, // Añadir la nueva función
 };

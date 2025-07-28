@@ -280,6 +280,7 @@ export default function EditorPage() {
   const uploadCustomBackgroundRef = useRef<HTMLInputElement>(null);
   const aiReferenceImageRef = useRef<HTMLInputElement>(null); // adminUploadPresetRef ya no es necesario aquí
 
+
   const [showCenterGuides, setShowCenterGuides] = useState(true);
 
 
@@ -967,7 +968,7 @@ export default function EditorPage() {
     setImageToMoveToBottomId(loadingImage.id); // Request to move this new image to bottom
 
     let finalPrompt = scenePrompt;
-    const apiKey = ""; // API key will be provided by Canvas runtime
+    const geminiApiKey = ""; // API key will be provided by Canvas runtime for Gemini calls
 
     try {
       if (aiReferenceImageFile) {
@@ -986,7 +987,7 @@ export default function EditorPage() {
         }
         const base64ImageData = reader.result.split(',')[1];
 
-        // Call Gemini to describe the reference image
+        // Call Gemini to describe the reference image (still done on frontend)
         const geminiPayload = {
           contents: [
             {
@@ -1004,7 +1005,7 @@ export default function EditorPage() {
           ],
         };
 
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
         const geminiResponse = await fetch(geminiApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1020,39 +1021,44 @@ export default function EditorPage() {
         }
       }
 
-      // Call Imagen to generate the scene
-      const imagenPayload = {
-        instances: { prompt: finalPrompt },
-        parameters: { "sampleCount": 1 }
-      };
+      // --- NUEVO: Llamada a tu API de backend para Replicate ---
+      const formData = new FormData();
+      formData.append('prompt', finalPrompt);
+      if (aiReferenceImageFile) {
+        formData.append('referenceImage', aiReferenceImageFile); // Envía el archivo real
+      }
 
-      const imagenApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-      const imagenResponse = await fetch(imagenApiUrl, {
+      const backendResponse = await fetch('/api/ai/generate-scene', { // Tu nuevo endpoint de API de backend
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(imagenPayload)
+        body: formData, // Envía como FormData
       });
-      const imagenResult = await imagenResponse.json();
 
-      if (imagenResult.predictions && imagenResult.predictions.length > 0 && imagenResult.predictions[0].bytesBase64Encoded) {
-        const imageUrl = `data:image/png;base64,${imagenResult.predictions[0].bytesBase64Encoded}`;
+      const backendResult = await backendResponse.json();
+
+      if (!backendResponse.ok) {
+        throw new Error(backendResult.message || 'Error al generar la escena desde el backend.');
+      }
+
+      // Asumiendo que backendResult contiene { url: string }
+      if (backendResult.url) {
+        const imageUrl = backendResult.url;
         setImageElements((prev) => prev.map(img =>
           img.id === loadingImageId ? { ...img, url: imageUrl, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
         ));
-        onTransformEndCommit(); // Save state after AI image is loaded
+        onTransformEndCommit(); // Guarda el estado después de cargar la imagen de IA
       } else {
         alert('No se pudo generar la escena. Intenta con otra descripción.');
-        console.error('Error de respuesta de la API de Imagen:', imagenResult);
-        // Update loading image to error state
+        console.error('Error de respuesta del backend para la escena AI:', backendResult);
+        // Actualiza la imagen de carga a estado de error
         setImageElements((prev) => prev.map(img =>
           img.id === loadingImageId ? { ...img, url: `https://placehold.co/200x200/ff0000/ffffff?text=Error+AI`, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
         ));
       }
 
     } catch (error) {
-      console.error('Error al llamar a la API de IA:', error);
+      console.error('Error al generar la escena con IA:', error);
       alert('Ocurrió un error al generar la escena con IA. Por favor, inténtalo de nuevo más tarde.');
-      // Update loading image to error state
+      // Actualiza la imagen de carga a estado de error
       setImageElements((prev) => prev.map(img =>
         img.id === loadingImageId ? { ...img, url: `https://placehold.co/200x200/ff0000/ffffff?text=Error+AI`, x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, scaleX: 1, scaleY: 1 } : img
       ));
@@ -1533,7 +1539,7 @@ export default function EditorPage() {
       setShadowColor: (val: string) => handleUpdateTextElement(selectedTextElementId!, { shadowColor: val }),
       setShadowBlur: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetX: val }),
-      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOffsetY: val }),
+      setShadowOffsetY: (val: number) => handleUpdateTextElement(selectedTextElementId!, { offsetY: val }), // CORRECTED LINE
       setShadowOpacity: (val: number) => handleUpdateTextElement(selectedTextElementId!, { shadowOpacity: val }),
       setReflectionEnabled: (val: boolean) => handleUpdateTextElement(selectedTextElementId!, { reflectionEnabled: val }),
       setFilter: (val: 'none' | 'grayscale' | 'sepia') => handleUpdateTextElement(selectedTextElementId!, { filter: val }),
