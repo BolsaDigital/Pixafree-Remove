@@ -1579,10 +1579,10 @@ export default function EditorPage() {
       reflectionEnabled: currentImageElement.reflectionEnabled,
       filter: currentImageElement.filter,
       setOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { opacity: val }),
-      setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }),
+      setBlurRadius: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurRadius: val }), // CORRECTED LINE
       setShadowEnabled: (val: boolean) => handleUpdateImageElement(selectedImageElementId!, { shadowEnabled: val }),
       setShadowColor: (val: string) => handleUpdateImageElement(selectedImageElementId!, { shadowColor: val }),
-      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { blurBlur: val }),
+      setShadowBlur: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowBlur: val }),
       setShadowOffsetX: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetX: val }),
       setShadowOffsetY: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOffsetY: val }),
       setShadowOpacity: (val: number) => handleUpdateImageElement(selectedImageElementId!, { shadowOpacity: val }),
@@ -2289,7 +2289,7 @@ export default function EditorPage() {
                         value={currentDateElement.text}
                         onChange={(e) => handleUpdateDateElement({ text: e.target.value })}
                         onBlur={onTransformEndCommit}
-                        style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
+                        style={{ border: '1999px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem', width: '100%' }}
                       />
                     </div>
                     <div>
