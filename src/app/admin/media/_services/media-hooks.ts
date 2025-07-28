@@ -124,7 +124,7 @@ interface MediaFilters {
   page: number;
   limit: number;
   sort: string; // Siempre será un string
-  order: SortOrder; // Siempre será 'asc' o 'desc'
+  order: SortOrder | undefined; // <--- CORRECCIÓN AQUÍ: Ahora puede ser undefined
   search: string;
 }
 
@@ -151,6 +151,7 @@ export const useMediaTable = () => {
       page: 1,
       ...filter,
       // Asegura que sort y order mantengan sus valores por defecto si no se proporcionan en el filtro parcial
+      // o que se actualicen si se proporcionan.
       sort: filter.sort !== undefined ? filter.sort : prev.sort,
       order: filter.order !== undefined ? filter.order : prev.order,
     }));
@@ -177,7 +178,7 @@ export const useMediaTable = () => {
         page: filters.page,
         limit: filters.limit,
         sort: filters.sort,
-        order: filters.order as SortOrder, // <--- CORRECCIÓN CLAVE AQUÍ: Type assertion
+        order: filters.order, // Ahora es compatible con el tipo esperado por queryMedia
         ...(filters.search && { search: filters.search }),
       }),
   });
