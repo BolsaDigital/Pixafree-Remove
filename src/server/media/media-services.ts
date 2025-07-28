@@ -1,7 +1,6 @@
 import prisma from '@/config/prisma';
 import { Prisma } from '@prisma/client';
-import { Context, Env } from 'hono';
-import { z } from 'zod';
+import { z } from 'zod'; // Asegúrate de que 'zod' esté instalado si no lo está: npm install zod
 
 import APIError from '@/lib/api-error';
 import { uploadFile, deleteMediaFile } from '@/lib/uploader';
@@ -9,7 +8,7 @@ import { getUniqueFileName } from '@/lib/utils';
 
 import { uploadProviders } from '../settings/setting-schema';
 import settingServices from '../settings/setting-services';
-import mediaSchema from './media-schema';
+import mediaSchema from './media-schema'; // Asumo que tienes un media-schema.ts
 
 // Actualizamos uploadMedia para aceptar los nuevos parámetros
 const uploadMedia = async (
@@ -17,7 +16,7 @@ const uploadMedia = async (
   userId?: string,
   libraryMedia?: boolean,
   isCustomBackground: boolean = false, // Nuevo parámetro
-  isPremium: boolean = false,           // Nuevo parámetro
+  isPremium: boolean = false,          // Nuevo parámetro
 ) => {
   const uploadConfig = await settingServices.getSettings('upload');
   const fileName = getUniqueFileName(file.name);
@@ -43,20 +42,19 @@ const uploadMedia = async (
   return media;
 };
 
-// Actualizamos createMedia para leer los nuevos campos del body
-const createMedia = async (c: Context<Env, string>) => {
-  const body = await c.req.parseBody();
-  const file = body['file'] as File;
-  // Convertir los valores de cadena a booleanos
-  const isCustomBackground = body['isCustomBackground'] === 'true';
-  const isPremium = body['isPremium'] === 'true';
-
+// createMedia ahora toma los parámetros directamente, no un 'Context' de Hono
+const createMedia = async (
+  file: File,
+  isCustomBackground: boolean,
+  isPremium: boolean,
+  userId?: string
+) => {
   if (!file || !file.name) {
     throw new APIError('Please provide a valid file');
   }
 
   // Pasar los nuevos campos a uploadMedia
-  return uploadMedia(file, undefined, true, isCustomBackground, isPremium);
+  return uploadMedia(file, userId, true, isCustomBackground, isPremium);
 };
 
 const getMedia = async (id: string) => {
@@ -67,13 +65,14 @@ const getMedia = async (id: string) => {
   });
 };
 
-const updateMedia = async (id: string, c: Context<Env, string>) => {
-  const body = await c.req.parseBody();
-  const file = body['file'] as File;
-  // También podemos añadir la lógica para actualizar isCustomBackground/isPremium si fuera necesario
-  // const isCustomBackground = body['isCustomBackground'] === 'true';
-  // const isPremium = body['isPremium'] === 'true';
-
+// updateMedia también toma los parámetros directamente
+const updateMedia = async (
+  id: string,
+  file: File,
+  // Si necesitas actualizar isCustomBackground/isPremium en el futuro, agrégalos aquí
+  // isCustomBackground?: boolean,
+  // isPremium?: boolean
+) => {
   if (!file || !file.name) {
     throw new APIError('Please provide a valid file');
   }
@@ -139,8 +138,12 @@ const deleteMedia = async (ids: string[]) => {
 };
 
 // Modificamos queryMedia para permitir filtrar por isCustomBackground y isPremium
-const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema> & { isCustomBackground?: boolean; isPremium?: boolean }) => {
-  const { page, limit, search, sort, order, isCustomBackground, isPremium } = query;
+// y para que libraryMedia sea opcional en el filtro where
+const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema> & {
+  isCustomBackground?: boolean;
+  isPremium?: boolean;
+}) => {
+  const { page, limit, search, sort, order, libraryMedia, isCustomBackground, isPremium } = query;
 
   const where: Prisma.MediaWhereInput = {
     ...(search && {
@@ -149,9 +152,10 @@ const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema> & 
         mode: 'insensitive',
       },
     }),
-    libraryMedia: true, // Esto asegura que solo se muestren los medios de la librería
-    ...(typeof isCustomBackground === 'boolean' && { isCustomBackground }), // Nuevo filtro
-    ...(typeof isPremium === 'boolean' && { isPremium }), // Nuevo filtro
+    // libraryMedia solo se aplica si está definido explícitamente
+    ...(libraryMedia !== undefined && { libraryMedia }),
+    ...(isCustomBackground !== undefined && { isCustomBackground }), // Nuevo filtro
+    ...(isPremium !== undefined && { isPremium }), // Nuevo filtro
   };
 
   const [docs, total] = await Promise.all([
