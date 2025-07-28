@@ -119,14 +119,9 @@ export const useUploadFiles = () => {
   };
 };
 
-// Define una interfaz precisa para los filtros
-interface MediaFilters {
-  page: number;
-  limit: number;
-  sort: string; // Siempre será un string
-  order: SortOrder; // <--- CORRECCIÓN AQUÍ: Ahora es estrictamente SortOrder
-  search: string;
-}
+// Importa el tipo inferido de Zod para los filtros de consulta
+import { mediaQuerySchema } from '@/server/media/media-schema';
+type MediaFilters = z.infer<typeof mediaQuerySchema>; // <--- CORRECCIÓN CLAVE AQUÍ: Usar z.infer directamente
 
 export const useMediaTable = () => {
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
@@ -134,30 +129,25 @@ export const useMediaTable = () => {
   const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
   const [preview, setPreview] = useState<Media | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  // Inicializa filters con el tipo MediaFilters
+  // Inicializa filters con el tipo MediaFilters y sus valores por defecto
   const [filters, setFilters] = useState<MediaFilters>({
     page: 1,
     limit: 15,
-    sort: 'createdAt', // Valor por defecto
-    order: 'desc',     // Valor por defecto
+    sort: 'createdAt',
+    order: 'desc',
     search: '',
+    // isCustomBackground y isPremium no necesitan inicializarse aquí si son opcionales en el esquema
+    // y no se usan en el estado inicial de la tabla de administración.
   });
   const queryClient = useQueryClient();
 
-  // Ajusta setFilter para asegurar que 'sort' y 'order' siempre sean del tipo correcto
+  // Ajusta setFilter para que sea más flexible con Partial
   const setFilter = (filter: Partial<MediaFilters>) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev, page: 1, ...filter };
-
-      // Asegura que sort y order siempre sean string y SortOrder, respectivamente.
-      // Si filter.sort/order es undefined, se usa el valor previo (que ya es válido).
-      // Si filter.sort/order es un string/SortOrder, se usa ese valor.
-      // Esto evita que el tipo se convierta en 'string | undefined' o 'SortOrder | undefined'.
-      newFilters.sort = filter.sort !== undefined ? filter.sort : prev.sort;
-      newFilters.order = filter.order !== undefined ? filter.order : prev.order;
-
-      return newFilters;
-    });
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      ...filter,
+    }));
   };
 
   const deleteMedia = useMutation({
@@ -178,11 +168,11 @@ export const useMediaTable = () => {
     queryKey: [queryKeys.media, filters],
     queryFn: () =>
       mediaActions.queryMedia({
-        page: filters.page,
-        limit: filters.limit,
-        sort: filters.sort,
-        order: filters.order, // Ahora es compatible con el tipo esperado por queryMedia
-        ...(filters.search && { search: filters.search }),
+        // Pasa directamente los filtros. mediaActions.queryMedia se encargará de parsear con Zod.
+        ...filters,
+        // Si necesitas pasar isCustomBackground o isPremium para esta tabla específica,
+        // agrégalos aquí. Por ejemplo, si esta tabla siempre debe mostrar solo ciertos tipos de medios.
+        // isCustomBackground: true, // Ejemplo: si la tabla solo muestra fondos personalizados
       }),
   });
 
