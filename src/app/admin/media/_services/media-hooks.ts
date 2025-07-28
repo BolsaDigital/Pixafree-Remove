@@ -5,11 +5,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useEffect, useRef, useState, MutableRefObject } from 'react';
 import { toast } from 'sonner';
+import { z } from 'zod'; // Asegúrate de importar z aquí también
 
 import { generateRandomKey } from '@/lib/crypto';
 import { SortOrder } from '@/lib/schema'; // Asegúrate de que SortOrder sea 'asc' | 'desc'
 
 import mediaActions from './media-actions';
+import mediaSchema, { MediaParsedQuerySchema } from '@/server/media/media-schema'; // Importar el esquema completo y el nuevo tipo parseado
 
 const apiUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -119,9 +121,9 @@ export const useUploadFiles = () => {
   };
 };
 
-// Importa el tipo inferido de Zod para los filtros de consulta
-import mediaSchema from '@/server/media/media-schema'; // <--- CORRECCIÓN AQUÍ: Importación por defecto
-type MediaFilters = z.infer<typeof mediaSchema.mediaQuerySchema>; // <--- CORRECCIÓN AQUÍ: Acceder a través del objeto por defecto
+// La interfaz de filtros ahora es la misma que la de entrada de Zod,
+// ya que la aplicación de los defaults se hará antes de la llamada a la acción.
+type MediaFilters = z.infer<typeof mediaSchema.mediaQuerySchema>;
 
 export const useMediaTable = () => {
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
@@ -129,32 +131,22 @@ export const useMediaTable = () => {
   const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
   const [preview, setPreview] = useState<Media | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  // Inicializa filters con el tipo MediaFilters y sus valores por defecto
+  // Inicializa filters con los valores por defecto del esquema
   const [filters, setFilters] = useState<MediaFilters>({
     page: 1,
     limit: 15,
     sort: 'createdAt',
     order: 'desc',
     search: '',
-    // isCustomBackground y isPremium no necesitan inicializarse aquí si son opcionales en el esquema
-    // y no se usan en el estado inicial de la tabla de administración.
   });
   const queryClient = useQueryClient();
 
-  // Ajusta setFilter para que sea más flexible con Partial
   const setFilter = (filter: Partial<MediaFilters>) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev, page: 1, ...filter };
-
-      // Asegura que sort y order siempre sean string y SortOrder, respectivamente.
-      // Si filter.sort/order es undefined, se usa el valor previo (que ya es válido).
-      // Si filter.sort/order es un string/SortOrder, se usa ese valor.
-      // Esto evita que el tipo se convierta en 'string | undefined' o 'SortOrder | undefined'.
-      newFilters.sort = filter.sort !== undefined ? filter.sort : prev.sort;
-      newFilters.order = filter.order !== undefined ? filter.order : prev.order;
-
-      return newFilters;
-    });
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      ...filter,
+    }));
   };
 
   const deleteMedia = useMutation({
@@ -173,14 +165,12 @@ export const useMediaTable = () => {
 
   const { data, isFetching } = useQuery({
     queryKey: [queryKeys.media, filters],
-    queryFn: () =>
-      mediaActions.queryMedia({
-        // Pasa directamente los filtros. mediaActions.queryMedia se encargará de parsear con Zod.
-        ...filters,
-        // Si necesitas pasar isCustomBackground o isPremium para esta tabla específica,
-        // agrégalos aquí. Por ejemplo, si esta tabla siempre debe mostrar solo fondos personalizados
-        // isCustomBackground: true,
-      }),
+    queryFn: () => {
+      // Parsear los filtros con Zod antes de pasarlos a mediaActions.queryMedia
+      // Esto asegura que 'sort' y 'order' siempre tendrán valores por defecto.
+      const parsedFilters = mediaSchema.mediaQuerySchema.parse(filters);
+      return mediaActions.queryMedia(parsedFilters);
+    },
   });
 
   useEffect(() => {

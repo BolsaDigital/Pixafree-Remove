@@ -1,26 +1,23 @@
-import mediaSchema from '@/server/media/media-schema';
+import mediaSchema, { MediaParsedQuerySchema } from '@/server/media/media-schema'; // Importar el nuevo tipo
 import { z } from 'zod';
 
 import { apiClient } from '@/lib/api-client';
 
-const queryMedia = async (query: z.infer<typeof mediaSchema.mediaQuerySchema>) => {
-  // Aplicar parse de Zod para asegurar que los defaults se apliquen y los tipos sean correctos
-  // Esto garantiza que 'sort' y 'order' serán siempre string y SortOrder, respectivamente.
-  const parsedQuery = mediaSchema.mediaQuerySchema.parse(query);
-
+// La función ahora espera un query que ya ha sido parseado y tiene los defaults aplicados
+const queryMedia = async (query: MediaParsedQuerySchema) => {
   const response = await apiClient.api.media.$get({
     query: {
-      search: parsedQuery.search,
-      page: parsedQuery.page,
-      limit: parsedQuery.limit,
-      sort: parsedQuery.sort,
-      order: parsedQuery.order,
-      userId: parsedQuery.userId,
-      libraryMedia: parsedQuery.libraryMedia,
-      isCustomBackground: parsedQuery.isCustomBackground,
-      isPremium: parsedQuery.isPremium,
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort, // Ahora garantizado como string
+      order: query.order, // Ahora garantizado como 'asc' | 'desc'
+      userId: query.userId,
+      libraryMedia: query.libraryMedia,
+      isCustomBackground: query.isCustomBackground,
+      isPremium: query.isPremium,
     } as any, // Mantenemos 'as any' aquí como último recurso si apiClient.$get es demasiado genérico.
-               // El tipo de 'parsedQuery' ya es seguro.
+               // El tipo de 'query' ya es seguro.
   });
 
   const data = await response.json();
