@@ -2,10 +2,9 @@ import { apiClient } from '@/lib/api-client';
 import { ApiTypes } from '@/app/api/[[...route]]/route'; // Importa ApiTypes para la aserción de tipo
 
 const unlockPremium = async (id: string) => {
-  // Añade una aserción de tipo explícita para apiClient.api
-  // Esto le dice a TypeScript que confíe en que 'api' tiene la estructura de ApiTypes['api']
-  // y, por lo tanto, la propiedad 'ai' existe.
-  const response = await (apiClient.api as ApiTypes['api']).ai['unlock-premium-download'][':id'].$post({
+  // ¡CORRECCIÓN CLAVE: Se ha eliminado el '.api' extra!
+  // Ahora se accede directamente a 'ai' en apiClient.
+  const response = await (apiClient as ApiTypes).ai['unlock-premium-download'][':id'].$post({
     param: {
       id,
     },
