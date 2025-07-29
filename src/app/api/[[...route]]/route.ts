@@ -109,5 +109,7 @@ export const PATCH = handle(app);
 export const OPTIONS = handle(app);
 export const DELETE = handle(app);
 
-// Type definition for routes
-export type ApiTypes = typeof routes;
+// ¡CORRECCIÓN CLAVE! ApiTypes debe ser typeof app, no typeof routes.
+// Esto asegura que el cliente Hono (hc) genere correctamente la propiedad 'api'
+// cuando se usa basePath.
+export type ApiTypes = typeof app;

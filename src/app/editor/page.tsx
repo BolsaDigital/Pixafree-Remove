@@ -1526,7 +1526,7 @@ export default function EditorPage() {
   } else if (selectedCanvasElement === 'background') {
     currentElementProps = {
       opacity: backgroundOpacity, blurRadius: backgroundBlurRadius,
-      shadowEnabled: backgroundShadowEnabled, shadowColor: backgroundShadowColor, shadowBlur: backgroundShadowBlur, shadowOffsetX: backgroundShadowOffsetX, shadowOffsetY: backgroundShadowOffsetY, shadowOpacity: backgroundShadowOpacity,
+      shadowEnabled: backgroundShadowEnabled, shadowColor: backgroundShadowColor, shadowBlur: backgroundShadowBlur, shadowOffsetX: backgroundShadowOffsetX, backgroundShadowOffsetY: backgroundShadowOffsetY, backgroundShadowOpacity: backgroundShadowOpacity,
       reflectionEnabled: backgroundReflectionEnabled,
       filter: backgroundFilter,
       setOpacity: setBackgroundOpacity, setBlurRadius: setBackgroundBlurRadius,

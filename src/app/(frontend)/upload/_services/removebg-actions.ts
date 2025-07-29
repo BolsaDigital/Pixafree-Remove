@@ -1,10 +1,11 @@
 import { apiClient } from '@/lib/api-client';
-import { ApiTypes } from '@/app/api/[[...route]]/route'; // Importa ApiTypes para la aserción de tipo
+// No necesitamos ApiTypes aquí si la inferencia de apiClient es correcta
+// import { ApiTypes } from '@/app/api/[[...route]]/route';
 
 const unlockPremium = async (id: string) => {
-  // ¡CORRECCIÓN CLAVE: Se ha eliminado el '.api' extra!
-  // Ahora se accede directamente a 'ai' en apiClient.
-  const response = await (apiClient as ApiTypes).ai['unlock-premium-download'][':id'].$post({
+  // Con la corrección en route.ts (ApiTypes = typeof app),
+  // apiClient.api.ai debería inferirse correctamente sin aserción explícita.
+  const response = await apiClient.api.ai['unlock-premium-download'][':id'].$post({
     param: {
       id,
     },
