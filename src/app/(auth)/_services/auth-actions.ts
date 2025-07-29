@@ -2,9 +2,11 @@ import authSchema from '@/server/auth/auth-schema';
 import { z } from 'zod';
 
 import { apiClient } from '@/lib/api-client';
+import { ApiTypes } from '@/app/api/[[...route]]/route'; // Importa ApiTypes
 
 const signup = async (body: z.infer<typeof authSchema.signUpSchema>) => {
-  const response = await apiClient.api.auth.signup.$post({
+  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
+  const response = await (apiClient as ApiTypes).api.auth.signup.$post({
     json: body,
   });
 
@@ -17,8 +19,9 @@ const signup = async (body: z.infer<typeof authSchema.signUpSchema>) => {
   return data;
 };
 
-const login = async (body: z.infer<typeof authSchema.loginSchema>) => {
-  const response = await apiClient.api.auth.login.$post({
+const login = async (body: z.infer<typeof authSchema.signInSchema>) => {
+  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
+  const response = await (apiClient as ApiTypes).api.auth.login.$post({
     json: body,
   });
 
@@ -32,7 +35,8 @@ const login = async (body: z.infer<typeof authSchema.loginSchema>) => {
 };
 
 const logout = async () => {
-  const response = await apiClient.api.auth.logout.$post();
+  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
+  const response = await (apiClient as ApiTypes).api.auth.logout.$post();
 
   if (!response.ok) {
     const data = await response.json();
@@ -44,7 +48,8 @@ const logout = async () => {
 };
 
 const forgotPassword = async (body: z.infer<typeof authSchema.forgotPasswordSchema>) => {
-  const response = await apiClient.api.auth['forgot-password'].$post({
+  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
+  const response = await (apiClient as ApiTypes).api.auth['forgot-password'].$post({
     json: body,
   });
 
@@ -58,7 +63,8 @@ const forgotPassword = async (body: z.infer<typeof authSchema.forgotPasswordSche
 };
 
 const resetPassword = async (body: z.infer<typeof authSchema.resetPasswordSchema>) => {
-  const response = await apiClient.api.auth['reset-password'].$post({
+  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
+  const response = await (apiClient as ApiTypes).api.auth['reset-password'].$post({
     json: body,
   });
 
