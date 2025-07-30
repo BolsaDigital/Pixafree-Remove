@@ -2264,7 +2264,7 @@ export default function EditorPage() {
                       </div>
                     )}
                     <div>
-                      <label htmlFor="shapeStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }>Color de Borde</label>
+                      <label htmlFor="shapeStrokeColor" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151' }}>Color de Borde</label>
                       <input
                         id="shapeStrokeColor"
                         type="color"
