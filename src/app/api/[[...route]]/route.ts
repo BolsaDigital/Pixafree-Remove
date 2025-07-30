@@ -19,7 +19,7 @@ import httpStatus from 'http-status';
 import path from 'path';
 
 import APIError from '@/lib/api-error';
-import { getFileByPath } from '@/lib/file';
+import { getFileByPath } => '@/lib/file';
 
 // Create Hono app with base path /api
 const app = new Hono().basePath('/api');
@@ -109,7 +109,6 @@ export const PATCH = handle(app);
 export const OPTIONS = handle(app);
 export const DELETE = handle(app);
 
-// ¡CORRECCIÓN CLAVE! ApiTypes debe ser typeof app, no typeof routes.
-// Esto asegura que el cliente Hono (hc) genere correctamente la propiedad 'api'
-// cuando se usa basePath.
-export type ApiTypes = typeof app;
+// Exporta la instancia de la aplicación Hono como un tipo.
+// ¡Importante: NO exportamos la instancia 'app' directamente aquí para evitar problemas de inferencia!
+export type AppType = typeof app;

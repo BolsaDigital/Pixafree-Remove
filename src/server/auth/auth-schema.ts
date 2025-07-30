@@ -1,34 +1,43 @@
 import { z } from 'zod';
 
-import { passwordSchema } from '@/lib/schema';
-
-const signUpSchema = z.object({
-  name: z.string().nonempty('Name is required').min(3, 'Name must be at least 3 characters'),
-  email: z.string().nonempty('Email is required').email('Email is not valid'),
-  password: passwordSchema,
+export const signUpSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
-const loginSchema = z.object({
-  email: z.string().nonempty('Email is required').email('Email is not valid'),
-  password: passwordSchema,
+// Definimos loginSchema para que esté disponible
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
 });
 
-const verifySchema = z.object({
-  token: z.string().nonempty('Token is required'),
+// Mantener signInSchema si se usa en otras partes, o eliminar si loginSchema lo reemplaza completamente.
+// Por seguridad, lo mantendremos por ahora.
+export const signInSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
 });
 
-const forgotPasswordSchema = z.object({
-  email: z.string().nonempty('Email is required').email('Email is not valid'),
+
+export const verifySchema = z.object({
+  token: z.string().min(1, 'Token is required'),
 });
 
-const resetPasswordSchema = z.object({
-  token: z.string().nonempty('Token is required'),
-  password: passwordSchema,
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
 });
 
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
+});
+
+// ¡IMPORTANTE! Asegúrate de que todos los esquemas estén incluidos en el default export
 export default {
   signUpSchema,
-  loginSchema,
+  signInSchema,
+  loginSchema, // ¡CORRECCIÓN! Aseguramos que loginSchema esté en el default export
   verifySchema,
   forgotPasswordSchema,
   resetPasswordSchema,

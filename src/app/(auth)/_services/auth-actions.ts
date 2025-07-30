@@ -1,12 +1,12 @@
-import authSchema from '@/server/auth/auth-schema';
+import authSchema from '@/server/auth/auth-schema'; // Importa el default export
 import { z } from 'zod';
 
 import { apiClient } from '@/lib/api-client';
-import { ApiTypes } from '@/app/api/[[...route]]/route'; // Importa ApiTypes
+// Ya no necesitamos importar ApiTypes ni AppType aquí, ya que apiClient está correctamente tipado desde api-client.ts
 
 const signup = async (body: z.infer<typeof authSchema.signUpSchema>) => {
-  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
-  const response = await (apiClient as ApiTypes).api.auth.signup.$post({
+  // apiClient ahora debería estar correctamente tipado
+  const response = await apiClient.auth.signup.$post({
     json: body,
   });
 
@@ -19,9 +19,9 @@ const signup = async (body: z.infer<typeof authSchema.signUpSchema>) => {
   return data;
 };
 
-const login = async (body: z.infer<typeof authSchema.signInSchema>) => {
-  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
-  const response = await (apiClient as ApiTypes).api.auth.login.$post({
+const login = async (body: z.infer<typeof authSchema.loginSchema>) => { // ¡CORRECCIÓN! Usamos loginSchema
+  // apiClient ahora debería estar correctamente tipado
+  const response = await apiClient.auth.login.$post({
     json: body,
   });
 
@@ -35,8 +35,8 @@ const login = async (body: z.infer<typeof authSchema.signInSchema>) => {
 };
 
 const logout = async () => {
-  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
-  const response = await (apiClient as ApiTypes).api.auth.logout.$post();
+  // apiClient ahora debería estar correctamente tipado
+  const response = await apiClient.auth.logout.$post();
 
   if (!response.ok) {
     const data = await response.json();
@@ -48,8 +48,8 @@ const logout = async () => {
 };
 
 const forgotPassword = async (body: z.infer<typeof authSchema.forgotPasswordSchema>) => {
-  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
-  const response = await (apiClient as ApiTypes).api.auth['forgot-password'].$post({
+  // apiClient ahora debería estar correctamente tipado
+  const response = await apiClient.auth['forgot-password'].$post({
     json: body,
   });
 
@@ -63,8 +63,8 @@ const forgotPassword = async (body: z.infer<typeof authSchema.forgotPasswordSche
 };
 
 const resetPassword = async (body: z.infer<typeof authSchema.resetPasswordSchema>) => {
-  // ¡CORRECCIÓN CLAVE! Aserción de tipo explícita para apiClient
-  const response = await (apiClient as ApiTypes).api.auth['reset-password'].$post({
+  // apiClient ahora debería estar correctamente tipado
+  const response = await apiClient.auth['reset-password'].$post({
     json: body,
   });
 
