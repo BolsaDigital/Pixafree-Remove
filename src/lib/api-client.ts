@@ -1,12 +1,41 @@
 import { hc } from 'hono/client';
-// ¡CORRECCIÓN CLAVE! Importa el tipo AppType desde el nuevo archivo de definición.
-import type { AppType } from '@/types/hono-api';
+import { Hono } from 'hono'; // Importar Hono para crear una instancia dummy
+// Importar los routers del servidor para la inferencia de tipos
+import authRouter from '@/server/auth/auth-routes';
+import userRouter from '@/server/users/user-routes';
+import settingRouter from '@/server/settings/setting-routes';
+import mediaRouter from '@/server/media/media-routes';
+import postRouter from '@/server/posts/post-routes';
+import planRouter from '@/server/plans/plan-routes';
+import billingRouter from '@/server/billing/billing-routes';
+import subscriptionRouter from '@/server/subscriptions/subscription-routes';
+import aiRouter from '@/server/ai/ai-routes';
+import commonRouter from '@/server/common/common-routes';
+
 
 // Define la URL base para el cliente Hono.
-// Usa una variable de entorno si está disponible, de lo contrario, usa '/api'.
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 
-// ¡CORRECCIÓN CLAVE! Pasa el tipo AppType directamente a hc.
-// Esto fuerza a TypeScript a inferir los tipos de la API de forma explícita
-// y robusta, resolviendo el problema de 'unknown' o 'never'.
-export const apiClient = hc<AppType>(BASE_URL);
+// ¡CORRECCIÓN CLAVE!
+// Creamos una instancia "dummy" de Hono en el cliente
+// para que TypeScript pueda inferir la estructura de la API.
+// Esto NO inicia un servidor Hono en el cliente, solo es para tipado.
+const app = new Hono().basePath('/api');
+
+// Recreamos la estructura de rutas aquí para la inferencia de tipos.
+// Las rutas deben coincidir con las definidas en src/app/api/[[...route]]/route.ts
+app
+  .route('/auth', authRouter)
+  .route('/users', userRouter)
+  .route('/settings', settingRouter)
+  .route('/media', mediaRouter)
+  .route('/posts', postRouter)
+  .route('/plans', planRouter)
+  .route('/billing', billingRouter)
+  .route('/subscriptions', subscriptionRouter)
+  .route('/ai', aiRouter)
+  .route('/common', commonRouter);
+
+// Exporta el cliente Hono, tipado con la instancia dummy 'app'.
+// Esto asegura que TypeScript conozca la estructura completa de tu API.
+export const apiClient = hc<typeof app>(BASE_URL);

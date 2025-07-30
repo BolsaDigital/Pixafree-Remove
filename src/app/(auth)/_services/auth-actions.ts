@@ -19,7 +19,7 @@ const signup = async (body: z.infer<typeof authSchema.signUpSchema>) => {
   return data;
 };
 
-const login = async (body: z.infer<typeof authSchema.loginSchema>) => { // ¡CORRECCIÓN! Usamos loginSchema
+const login = async (body: z.infer<typeof authSchema.loginSchema>) => { // Usamos loginSchema
   // apiClient ahora debería estar correctamente tipado
   const response = await apiClient.auth.login.$post({
     json: body,

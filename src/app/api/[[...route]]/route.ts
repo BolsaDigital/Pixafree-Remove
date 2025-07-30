@@ -19,8 +19,7 @@ import httpStatus from 'http-status';
 import path from 'path';
 
 import APIError from '@/lib/api-error';
-// ¡CORRECCIÓN CRÍTICA DE SINTAXIS! Cambiado '=>' a 'from'
-import { getFileByPath } from '@/lib/file';
+import { getFileByPath } from '@/lib/file'; // Corregido: de '=>' a 'from'
 
 // Create Hono app with base path /api
 const app = new Hono().basePath('/api');
@@ -110,5 +109,6 @@ export const PATCH = handle(app);
 export const OPTIONS = handle(app);
 export const DELETE = handle(app);
 
-// Exporta la instancia de la aplicación Hono como un tipo.
-export type AppType = typeof app;
+// ¡CORRECCIÓN CLAVE! Exporta la instancia 'app' directamente.
+// Esto es crucial para que hono/client pueda referenciarla y generar tipos.
+export { app };

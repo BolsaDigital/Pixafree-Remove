@@ -12,12 +12,14 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-// Mantener signInSchema si se usa en otras partes, o eliminar si loginSchema lo reemplaza completamente.
-// Por seguridad, lo mantendremos por ahora.
-export const signInSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
+// Eliminamos signInSchema si no se usa en ninguna otra parte.
+// Si se usa en otros lugares, asegúrate de que sea el mismo que loginSchema o renómbralo.
+// Por ahora, para simplificar y evitar duplicidad, lo eliminamos si loginSchema es el preferido.
+// Si necesitas signInSchema con un propósito diferente, deberías reintroducirlo con un nombre distinto.
+// export const signInSchema = z.object({
+//   email: z.string().email('Invalid email address'),
+//   password: z.string().min(1, 'Password is required'),
+// });
 
 
 export const verifySchema = z.object({
@@ -36,8 +38,8 @@ export const resetPasswordSchema = z.object({
 // ¡IMPORTANTE! Asegúrate de que todos los esquemas estén incluidos en el default export
 export default {
   signUpSchema,
-  signInSchema,
-  loginSchema, // ¡CORRECCIÓN! Aseguramos que loginSchema esté en el default export
+  loginSchema, // Aseguramos que loginSchema esté en el default export
+  // signInSchema, // Eliminado del default export si no se usa
   verifySchema,
   forgotPasswordSchema,
   resetPasswordSchema,
